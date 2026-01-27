@@ -1,5 +1,6 @@
 package com.equalatam.equlatam_backv2.entity;
 
+import com.equalatam.equlatam_backv2.sucursales.entity.Sucursal;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -22,6 +23,10 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
+    @ManyToOne
+    @JoinColumn(name = "sucursal_id")
+    private Sucursal sucursal;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
