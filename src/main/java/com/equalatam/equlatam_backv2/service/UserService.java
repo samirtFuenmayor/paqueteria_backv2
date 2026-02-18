@@ -24,9 +24,20 @@ public class UserService {
     private final RoleRepository roleRepository;
 
     public User create(UserCreateRequest req) {
+
         User u = new User();
+        u.setNombre(req.nombre());
+        u.setApellido(req.apellido());
         u.setUsername(req.username());
+        u.setCorreo(req.correo());
+        u.setTelefono(req.telefono());
+        u.setNacionalidad(req.nacionalidad());
+        u.setProvincia(req.provincia());
+        u.setCiudad(req.ciudad());
+        u.setDireccion(req.direccion());
+        u.setFechaNacimiento(req.fechaNacimiento());
         u.setPassword(encoder.encode(req.password()));
+
         return userRepository.save(u);
     }
 
@@ -34,10 +45,30 @@ public class UserService {
         return userRepository.findAll();
     }
 
+    public User getByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    }
+
     public User update(UUID id, UserCreateRequest req) {
-        User u = userRepository.findById(id).orElseThrow();
-        u.setUsername(req.username());
-        u.setPassword(encoder.encode(req.password()));
+
+        User u = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no existe"));
+
+        u.setNombre(req.nombre());
+        u.setApellido(req.apellido());
+        u.setCorreo(req.correo());
+        u.setTelefono(req.telefono());
+        u.setNacionalidad(req.nacionalidad());
+        u.setProvincia(req.provincia());
+        u.setCiudad(req.ciudad());
+        u.setDireccion(req.direccion());
+        u.setFechaNacimiento(req.fechaNacimiento());
+
+        if (req.password() != null && !req.password().isBlank()) {
+            u.setPassword(encoder.encode(req.password()));
+        }
+
         return userRepository.save(u);
     }
 
@@ -54,5 +85,4 @@ public class UserService {
         user.setRoles(roles);
         return user;
     }
-
 }

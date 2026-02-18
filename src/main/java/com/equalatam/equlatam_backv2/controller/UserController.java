@@ -28,6 +28,11 @@ public class UserController {
         return service.getAll();
     }
 
+    @GetMapping("/username/{username}")
+    public User getByUsername(@PathVariable String username) {
+        return service.getByUsername(username);
+    }
+
     @PutMapping("/{id}")
     public User update(@PathVariable UUID id,
                        @RequestBody UserCreateRequest r) {
@@ -43,5 +48,4 @@ public class UserController {
                 service.assignRoles(userId, roleIds)
         );
     }
-
 }
