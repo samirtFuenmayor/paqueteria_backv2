@@ -1,12 +1,16 @@
 package com.equalatam.equlatam_backv2.controller;
 
+import com.equalatam.equlatam_backv2.dto.request.RoleCreateRequest;
 import com.equalatam.equlatam_backv2.entity.Role;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import com.equalatam.equlatam_backv2.service.RoleService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -18,23 +22,21 @@ public class RoleController {
     private final RoleService roleService;
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Map<String, String> body) {
-        return ResponseEntity.ok(roleService.create(body.get("name")));
+   // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Role> create(@Valid @RequestBody RoleCreateRequest r) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(roleService.create(r.name()));
     }
 
     @GetMapping
-    public ResponseEntity<?> list() {
+    public ResponseEntity<List<Role>> list() {
         return ResponseEntity.ok(roleService.findAll());
     }
 
     @PutMapping("/{roleId}/permissions")
-    public ResponseEntity<?> assignPermissions(
-            @PathVariable UUID roleId,
-            @RequestBody Set<UUID> permissionIds) {
-
-        return ResponseEntity.ok(
-                roleService.assignPermissions(roleId, permissionIds)
-        );
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Role> assignPermissions(@PathVariable UUID roleId,
+                                                  @RequestBody Set<UUID> permissionIds) {
+        return ResponseEntity.ok(roleService.assignPermissions(roleId, permissionIds));
     }
-
 }
