@@ -1,5 +1,6 @@
 package com.equalatam.equlatam_backv2.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -9,6 +10,8 @@ import java.util.UUID;
 @Table(name = "permissions")
 @Getter @Setter
 @NoArgsConstructor
+// En Permission.java - por si tiene referencia inversa
+@JsonIgnoreProperties({"permissions"})
 public class Permission {
 
     @Id

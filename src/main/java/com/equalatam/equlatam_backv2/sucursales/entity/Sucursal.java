@@ -1,18 +1,14 @@
 package com.equalatam.equlatam_backv2.sucursales.entity;
 
-import com.equalatam.equlatam_backv2.sucursales.Enums;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "sucursales")
-@Getter
-@Setter
+@Getter @Setter
 @NoArgsConstructor
 public class Sucursal {
 
@@ -23,16 +19,50 @@ public class Sucursal {
     @Column(nullable = false)
     private String nombre;
 
+    // Código único de sucursal (ej: MIA-001, YYZ-001, UIO-MATRIZ)
+    @Column(unique = true, nullable = false)
+    private String codigo;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TipoSucursal tipo;
+
+    // País donde opera la sucursal
+    @Column(nullable = false)
+    private String pais;
+
+    // Ciudad
+    @Column(nullable = false)
+    private String ciudad;
+
+    // Dirección física completa
     @Column(nullable = false)
     private String direccion;
 
-    private String ciudad;
-    private String provincia;
+    // Teléfono de contacto
     private String telefono;
 
-    @Enumerated(EnumType.STRING)
-    private Enums.EstadoSucursal estado;
+    // Email de la sucursal
+    private String email;
 
-    private LocalDateTime fechaCreacion;
-    private LocalDateTime fechaActualizacion;
+    // Responsable de la sucursal
+    private String responsable;
+
+    // Si la sucursal está activa o fue dada de baja
+    @Column(nullable = false)
+    private boolean activa = true;
+
+    // Prefijo para generar casilleros de clientes (ej: "MIA", "YYZ", "UIO")
+    @Column(unique = true, nullable = false)
+    private String prefijoCasillero;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime creadoEn = LocalDateTime.now();
+
+    private LocalDateTime actualizadoEn;
+
+    @PreUpdate
+    public void preUpdate() {
+        this.actualizadoEn = LocalDateTime.now();
+    }
 }

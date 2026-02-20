@@ -1,5 +1,6 @@
 package com.equalatam.equlatam_backv2.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,5 +27,6 @@ public class Role {
             joinColumns = @JoinColumn(name = "role_id"),
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
+    @JsonIgnoreProperties({"roles"})   // ← corta el loop Role → Permission → Role
     private Set<Permission> permissions = new HashSet<>();
 }
