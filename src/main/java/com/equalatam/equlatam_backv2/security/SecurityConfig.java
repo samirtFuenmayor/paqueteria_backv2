@@ -72,6 +72,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/despachos/**").permitAll()
                         .requestMatchers("/api/tracking/public/**").permitAll()
                         .requestMatchers("/api/tracking/**").permitAll()
+                        .requestMatchers("/api/guias/**").permitAll()
+                        .requestMatchers("/api/tarifas/**").permitAll()
+                        .requestMatchers("/api/cotizador/**").permitAll()
+                        .requestMatchers("/api/notificaciones/**").permitAll()
                         // ── resto autenticado ──────────────────────────────────────
                         .anyRequest().authenticated()
                 )

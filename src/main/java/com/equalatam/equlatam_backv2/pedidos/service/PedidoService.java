@@ -3,6 +3,7 @@ package com.equalatam.equlatam_backv2.pedidos.service;
 import com.equalatam.equlatam_backv2.cliente.entity.Cliente;
 import com.equalatam.equlatam_backv2.cliente.repositories.ClienteRepository;
 import com.equalatam.equlatam_backv2.exception.ResourceNotFoundException;
+import com.equalatam.equlatam_backv2.notificaciones.service.NotificacionesService;
 import com.equalatam.equlatam_backv2.pedidos.dto.request.PedidoRequest;
 import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResponse;
 import com.equalatam.equlatam_backv2.pedidos.entity.EstadoPedido;
@@ -33,6 +34,9 @@ public class PedidoService {
     private final SucursalRepository sucursalRepository;
     private final UserRepository userRepository;
     private final TrackingService trackingService; // ← NUEVO
+    private final NotificacionesService notificacionService;
+
+
 
     // ─── Crear pedido ─────────────────────────────────────────────────────────
     @Transactional
@@ -82,6 +86,7 @@ public class PedidoService {
         }
 
         Pedido guardado = pedidoRepository.save(pedido);
+       // notificacionService.notificarPedidoRegistrado(guardado);
 
         // ── Registrar primer evento de tracking automáticamente ───────────────
         trackingService.registrarEvento(
@@ -92,6 +97,9 @@ public class PedidoService {
         );
 
         return PedidoResponse.from(guardado);
+
+        //notificacionService.notificarPedidoRegistrado(guardado);
+      //  notificacionService.notificarCambioEstado(guardado, nuevoEstado, observacion);
     }
 
     // ─── Listar todos ─────────────────────────────────────────────────────────
@@ -224,6 +232,7 @@ public class PedidoService {
         }
 
         Pedido guardado = pedidoRepository.save(pedido);
+      //  notificacionService.notificarCambioEstado(guardado, nuevoEstado, observacion);
 
         // ── Registrar evento de tracking automáticamente ──────────────────────
         String desc = observacion != null && !observacion.isBlank()
