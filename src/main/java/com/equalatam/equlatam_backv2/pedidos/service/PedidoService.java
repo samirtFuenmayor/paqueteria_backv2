@@ -34,6 +34,8 @@ public class PedidoService {
     private final UserRepository userRepository;
     private final TrackingService trackingService; // ← NUEVO
 
+
+
     // ─── Crear pedido ─────────────────────────────────────────────────────────
     @Transactional
     public PedidoResponse create(PedidoRequest req, String usernameEmpleado) {
@@ -82,6 +84,7 @@ public class PedidoService {
         }
 
         Pedido guardado = pedidoRepository.save(pedido);
+       // notificacionService.notificarPedidoRegistrado(guardado);
 
         // ── Registrar primer evento de tracking automáticamente ───────────────
         trackingService.registrarEvento(
@@ -92,6 +95,9 @@ public class PedidoService {
         );
 
         return PedidoResponse.from(guardado);
+
+        //notificacionService.notificarPedidoRegistrado(guardado);
+      //  notificacionService.notificarCambioEstado(guardado, nuevoEstado, observacion);
     }
 
     // ─── Listar todos ─────────────────────────────────────────────────────────
@@ -224,6 +230,7 @@ public class PedidoService {
         }
 
         Pedido guardado = pedidoRepository.save(pedido);
+      //  notificacionService.notificarCambioEstado(guardado, nuevoEstado, observacion);
 
         // ── Registrar evento de tracking automáticamente ──────────────────────
         String desc = observacion != null && !observacion.isBlank()

@@ -1,6 +1,7 @@
 package com.equalatam.equlatam_backv2.controller;
 
 import com.equalatam.equlatam_backv2.dto.request.UserCreateRequest;
+import com.equalatam.equlatam_backv2.dto.request.UserUpdateRequest;
 import com.equalatam.equlatam_backv2.dto.response.UserResponse;
 import com.equalatam.equlatam_backv2.service.UserService;
 import jakarta.validation.Valid;
@@ -42,9 +43,11 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponse> update(@PathVariable UUID id,
-                                               @Valid @RequestBody UserCreateRequest r) {
-        return ResponseEntity.ok(service.update(id, r));
+    public ResponseEntity<UserResponse> update(
+            @PathVariable UUID id,
+            @Valid @RequestBody UserUpdateRequest request
+    ) {
+        return ResponseEntity.ok(service.update(id, request));
     }
 
     @PutMapping("/{userId}/roles")
