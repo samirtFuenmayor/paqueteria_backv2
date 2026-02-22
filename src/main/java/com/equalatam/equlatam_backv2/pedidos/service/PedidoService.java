@@ -3,7 +3,6 @@ package com.equalatam.equlatam_backv2.pedidos.service;
 import com.equalatam.equlatam_backv2.cliente.entity.Cliente;
 import com.equalatam.equlatam_backv2.cliente.repositories.ClienteRepository;
 import com.equalatam.equlatam_backv2.exception.ResourceNotFoundException;
-import com.equalatam.equlatam_backv2.notificaciones.service.NotificacionesService;
 import com.equalatam.equlatam_backv2.pedidos.dto.request.PedidoRequest;
 import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResponse;
 import com.equalatam.equlatam_backv2.pedidos.entity.EstadoPedido;
@@ -34,7 +33,6 @@ public class PedidoService {
     private final SucursalRepository sucursalRepository;
     private final UserRepository userRepository;
     private final TrackingService trackingService; // ← NUEVO
-    private final NotificacionesService notificacionService;
 
 
 

@@ -1,6 +1,7 @@
 package com.equalatam.equlatam_backv2.service;
 
 import com.equalatam.equlatam_backv2.dto.request.UserCreateRequest;
+import com.equalatam.equlatam_backv2.dto.request.UserUpdateRequest;
 import com.equalatam.equlatam_backv2.dto.response.UserResponse;
 import com.equalatam.equlatam_backv2.entity.Role;
 import com.equalatam.equlatam_backv2.entity.User;
@@ -57,12 +58,33 @@ public class UserService {
     }
 
     // ─── Actualizar ───────────────────────────────────────────────────────────
-    public UserResponse update(UUID id, UserCreateRequest req) {
+    public UserResponse update(UUID id, UserUpdateRequest req) {
+
         User u = getUserOrThrow(id);
-        mapRequestToUser(req, u);
+
+        u.setNombre(req.nombre());
+        u.setApellido(req.apellido());
+        u.setUsername(req.username());
+        u.setCorreo(req.correo());
+        u.setTelefono(req.telefono());
+        u.setNacionalidad(req.nacionalidad());
+        u.setProvincia(req.provincia());
+        u.setCiudad(req.ciudad());
+        u.setDireccion(req.direccion());
+        u.setFechaNacimiento(req.fechaNacimiento());
+
+        if (req.sucursalId() != null) {
+            Sucursal sucursal = sucursalRepository.findById(req.sucursalId())
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException("Sucursal no encontrada: " + req.sucursalId()));
+            u.setSucursal(sucursal);
+        }
+
+        // 🔥 Solo actualiza password si viene
         if (req.password() != null && !req.password().isBlank()) {
             u.setPassword(encoder.encode(req.password()));
         }
+
         return UserResponse.from(userRepository.save(u));
     }
 
