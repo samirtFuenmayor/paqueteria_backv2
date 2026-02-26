@@ -11,8 +11,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "users")
-@Getter
-@Setter
+@Getter @Setter
 @NoArgsConstructor
 public class User {
 
@@ -42,6 +41,12 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
+    // ─── Si true → el usuario DEBE cambiar su contraseña al primer login ──────
+    // true  = admin creó la cuenta con contraseña temporal
+    // false = el cliente se registró solo (puso su propia contraseña)
+    @Column(nullable = false)
+    private boolean mustChangePassword = false;
 
     @ManyToOne
     @JoinColumn(name = "sucursal_id")

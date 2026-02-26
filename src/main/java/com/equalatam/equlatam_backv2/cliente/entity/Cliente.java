@@ -1,5 +1,6 @@
 package com.equalatam.equlatam_backv2.cliente.entity;
 
+import com.equalatam.equlatam_backv2.entity.User;
 import com.equalatam.equlatam_backv2.sucursales.entity.Sucursal;
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,11 +24,10 @@ public class Cliente {
     @Column(nullable = false)
     private TipoIdentificacion tipoIdentificacion;
 
-    // Cédula, RUC o Pasaporte — es el username del cliente
     @Column(unique = true, nullable = false)
-    private String numeroIdentificacion;
+    private String numeroIdentificacion;   // username del cliente para login
 
-    // ─── Datos personales ──────────────────────────────────────────────────────
+    // ─── Datos personales ─────────────────────────────────────────────────────
     @Column(nullable = false)
     private String nombres;
 
@@ -38,26 +38,38 @@ public class Cliente {
     private String email;
 
     private String telefono;
-
     private LocalDate fechaNacimiento;
 
-    // ─── Datos de ubicación ───────────────────────────────────────────────────
+    // ─── Ubicación ────────────────────────────────────────────────────────────
     @Column(nullable = false)
-    private String pais;         // Ecuador, USA, Canada, etc.
-
+    private String pais;
     private String provincia;
     private String ciudad;
     private String direccion;
 
-    // ─── Casillero asignado ───────────────────────────────────────────────────
-    // Ejemplo: MIA-00123, YYZ-00456
+    // ─── Casillero ───────────────────────────────────────────────────────────
     @Column(unique = true)
     private String casillero;
 
-    // Sucursal exterior donde el cliente recibe sus paquetes
     @ManyToOne
     @JoinColumn(name = "sucursal_id")
     private Sucursal sucursalAsignada;
+
+    // ─── Usuario de acceso (creado automáticamente al registrarse) ────────────
+    @OneToOne
+    @JoinColumn(name = "user_id", unique = true)
+    private User user;
+
+    // ─── Familia / titular ────────────────────────────────────────────────────
+    // Si es null → es titular independiente
+    // Si tiene valor → está "afiliado" a ese titular
+    @ManyToOne
+    @JoinColumn(name = "titular_id")
+    private Cliente titular;
+
+    // Relación con el titular: HIJO, CONYUGE, PADRE, MADRE, AMIGO, OTRO
+    @Enumerated(EnumType.STRING)
+    private Parentesco parentesco;
 
     // ─── Estado y auditoría ───────────────────────────────────────────────────
     @Enumerated(EnumType.STRING)
@@ -66,6 +78,10 @@ public class Cliente {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime creadoEn = LocalDateTime.now();
+
+    // Fecha en que el cliente completó su registro (puede ser igual a creadoEn)
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime fechaRegistro = LocalDateTime.now();
 
     private LocalDateTime actualizadoEn;
 

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 import java.util.UUID;
 
-public record ClienteRequest(
+public record ClienteRegistroRequest(
 
         @NotNull(message = "El tipo de identificación es obligatorio")
         TipoIdentificacion tipoIdentificacion,
@@ -34,12 +34,14 @@ public record ClienteRequest(
         String provincia,
         String ciudad,
         String direccion,
-        UUID   sucursalId,
-        String observaciones,
 
-        @Size(min = 8, message = "La contraseña temporal debe tener al menos 8 caracteres")
-        String passwordTemporal,
+        @NotBlank(message = "La contraseña es obligatoria")
+        @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
+        String password,
 
-        UUID       titularId,
+        UUID sucursalId,
+
+        // ─── Afiliación familiar (opcional) ───────────────────────────────────
+        UUID       titularId,    // ID del titular — más seguro que mandar la cédula
         Parentesco parentesco
 ) {}
