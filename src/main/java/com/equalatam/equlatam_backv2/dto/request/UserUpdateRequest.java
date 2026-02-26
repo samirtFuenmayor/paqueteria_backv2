@@ -2,6 +2,7 @@ package com.equalatam.equlatam_backv2.dto.request;
 
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.UUID;
 
 public record UserUpdateRequest(

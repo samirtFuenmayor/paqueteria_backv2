@@ -63,6 +63,8 @@ public class SecurityConfig {
                         // ── SETUP INICIAL: rutas públicas ──────────────────────────
                         // ⚠️ Cuando tengas JWT funcionando, protege con hasRole("ADMIN")
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/auth/cambiar-password").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/auth/reset-password/**").permitAll()
                         .requestMatchers("/api/sucursales/**").permitAll()
                         .requestMatchers("/api/users/**").permitAll()
                         .requestMatchers("/api/roles/**").permitAll()
@@ -76,6 +78,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/tarifas/**").permitAll()
                         .requestMatchers("/api/cotizador/**").permitAll()
                         .requestMatchers("/api/notificaciones/**").permitAll()
+                        .requestMatchers("/api/auth/registro-cliente/**").permitAll()
                         // ── resto autenticado ──────────────────────────────────────
                         .anyRequest().authenticated()
                 )

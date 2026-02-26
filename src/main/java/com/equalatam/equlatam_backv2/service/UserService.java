@@ -35,6 +35,19 @@ public class UserService {
         User u = new User();
         mapRequestToUser(req, u);
         u.setPassword(encoder.encode(req.password()));
+
+        if (req.roleIds() == null || req.roleIds().isEmpty()) {
+            throw new IllegalArgumentException("Debe asignar al menos un rol");
+        }
+
+        Set<Role> roles = new HashSet<>(roleRepository.findAllById(req.roleIds()));
+
+        if (roles.size() != req.roleIds().size()) {
+            throw new IllegalArgumentException("Uno o más roles no existen");
+        }
+
+        u.setRoles(roles);
+
         return UserResponse.from(userRepository.save(u));
     }
 

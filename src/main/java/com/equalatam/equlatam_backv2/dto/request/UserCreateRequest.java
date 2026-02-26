@@ -3,6 +3,7 @@ package com.equalatam.equlatam_backv2.dto.request;
 import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.UUID;
 
 public record UserCreateRequest(
@@ -33,5 +34,7 @@ public record UserCreateRequest(
         @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
         String password,
 
-        UUID sucursalId
+        UUID sucursalId,
+        Set<UUID> roleIds
+
 ) {}
