@@ -79,6 +79,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/cotizador/**").permitAll()
                         .requestMatchers("/api/notificaciones/**").permitAll()
                         .requestMatchers("/api/auth/registro-cliente/**").permitAll()
+                        .requestMatchers("/api/financiero/cotizaciones/**").permitAll()
+                        .requestMatchers("/api/financiero/facturas/**").permitAll()
+                        .requestMatchers("/api/financiero/notas/**").permitAll()
+                        .requestMatchers("/api/financiero/pagos/**").permitAll()
+                        .requestMatchers("/api/financiero/tarifas/**").permitAll()
+
                         // ── resto autenticado ──────────────────────────────────────
                         .anyRequest().authenticated()
                 )
