@@ -9,6 +9,7 @@ import java.util.UUID;
 @Table(name = "factura_detalles")
 @Getter @Setter
 @NoArgsConstructor
+
 public class FacturaDetalle {
 
     @Id

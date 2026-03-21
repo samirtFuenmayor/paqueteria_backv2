@@ -26,4 +26,6 @@ public interface CotizacionRepository extends JpaRepository<Cotizacion, UUID> {
     // Último número para autoincremental
     @Query("SELECT MAX(c.numeroCotizacion) FROM Cotizacion c WHERE c.numeroCotizacion LIKE :prefijo%")
     Optional<String> findUltimoNumero(@Param("prefijo") String prefijo);
+
+    List<Cotizacion> findByEstadoIn(List<EstadoCotizacion> estados);
 }

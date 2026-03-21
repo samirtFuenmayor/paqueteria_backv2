@@ -26,4 +26,6 @@ public class CotizacionResponse {
     private LocalDate validaHasta;
     private String observaciones;
     private String creadoEn;
+    // En CotizacionResponse.java agrega:
+    private Double valorDeclarado;
 }

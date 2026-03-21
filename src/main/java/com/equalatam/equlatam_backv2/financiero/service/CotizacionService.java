@@ -4,6 +4,7 @@ import com.equalatam.equlatam_backv2.cliente.repositories.ClienteRepository;
 import com.equalatam.equlatam_backv2.entity.User;
 import com.equalatam.equlatam_backv2.financiero.dto.AprobarCotizacionRequest;
 import com.equalatam.equlatam_backv2.financiero.dto.CotizacionRequest;
+import com.equalatam.equlatam_backv2.financiero.dto.CotizacionResponse;
 import com.equalatam.equlatam_backv2.financiero.entity.Cotizacion;
 import com.equalatam.equlatam_backv2.financiero.entity.Tarifa;
 import com.equalatam.equlatam_backv2.financiero.enums.EstadoCotizacion;
@@ -148,9 +149,10 @@ public class CotizacionService {
     }
 
     public List<Cotizacion> listarPendientes() {
-        return repo.findByEstado(EstadoCotizacion.PENDIENTE);
+        // Traer PENDIENTE y APROBADA para que el cajero pueda facturarlas
+        return repo.findByEstadoIn(
+                List.of(EstadoCotizacion.PENDIENTE, EstadoCotizacion.APROBADA));
     }
-
     // ─── Vencer cotizaciones expiradas (para scheduler) ──────────────────────
 
     @Transactional
@@ -190,5 +192,33 @@ public class CotizacionService {
         c.setObservaciones(infoPago);
 
         return repo.save(c);
+    }
+
+
+    public CotizacionResponse toResponse(Cotizacion c) {
+        CotizacionResponse r = new CotizacionResponse();
+        r.setId(c.getId());
+        r.setNumeroCotizacion(c.getNumeroCotizacion());
+        r.setEstado(c.getEstado() != null ? c.getEstado().name() : null);
+        r.setSubtotal(c.getSubtotal());
+        r.setPorcentajeIva(c.getPorcentajeIva());
+        r.setMontoIva(c.getMontoIva());
+        r.setTotal(c.getTotal());
+        r.setPesoReal(c.getPesoReal());
+        r.setPesoVolumetrico(c.getPesoVolumetrico());
+        r.setPesoFacturable(c.getPesoFacturable());
+        r.setValorDeclarado(c.getValorDeclarado());
+        r.setValidaHasta(c.getValidaHasta());
+        r.setObservaciones(c.getObservaciones());
+        r.setDetalleCalculo(c.getDetalleCalculo());
+        r.setCreadoEn(c.getCreadoEn() != null ? c.getCreadoEn().toString() : null);
+        if (c.getTarifa() != null) r.setCategoria(c.getTarifa().getCategoria());
+        if (c.getCliente() != null) {
+            r.setClienteNombre(c.getCliente().getNombres() + " " + c.getCliente().getApellidos());
+            r.setClienteIdentificacion(c.getCliente().getNumeroIdentificacion());
+        }
+        if (c.getPedido() != null) r.setPedidoNumero(c.getPedido().getNumeroPedido());
+        if (c.getTarifa() != null) r.setTarifaNombre(c.getTarifa().getNombre());
+        return r;
     }
 }

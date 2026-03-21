@@ -3,17 +3,16 @@ package com.equalatam.equlatam_backv2.financiero.controller;
 import com.equalatam.equlatam_backv2.entity.User;
 import com.equalatam.equlatam_backv2.financiero.dto.AprobarCotizacionRequest;
 import com.equalatam.equlatam_backv2.financiero.dto.CotizacionRequest;
-import com.equalatam.equlatam_backv2.financiero.entity.Cotizacion;
+import com.equalatam.equlatam_backv2.financiero.dto.CotizacionResponse;
 import com.equalatam.equlatam_backv2.financiero.service.CotizacionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/financiero/cotizaciones")
@@ -22,58 +21,49 @@ public class CotizacionController {
 
     private final CotizacionService service;
 
-    // GET /api/financiero/cotizaciones
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLEADO')")
-    public ResponseEntity<List<Cotizacion>> listarTodas() {
-        return ResponseEntity.ok(service.listarPendientes());
+    public ResponseEntity<List<CotizacionResponse>> listarTodas() {
+        return ResponseEntity.ok(service.listarPendientes().stream()
+                .map(service::toResponse).collect(Collectors.toList()));
     }
 
-    // GET /api/financiero/cotizaciones/{id}
     @GetMapping("/{id}")
-    public ResponseEntity<Cotizacion> obtener(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.obtener(id));
+    public ResponseEntity<CotizacionResponse> obtener(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.toResponse(service.obtener(id)));
     }
 
-    // GET /api/financiero/cotizaciones/cliente/{clienteId}
     @GetMapping("/cliente/{clienteId}")
-    public ResponseEntity<List<Cotizacion>> porCliente(@PathVariable UUID clienteId) {
-        return ResponseEntity.ok(service.listarPorCliente(clienteId));
+    public ResponseEntity<List<CotizacionResponse>> porCliente(@PathVariable UUID clienteId) {
+        return ResponseEntity.ok(service.listarPorCliente(clienteId).stream()
+                .map(service::toResponse).collect(Collectors.toList()));
     }
 
-    // GET /api/financiero/cotizaciones/pedido/{pedidoId}
     @GetMapping("/pedido/{pedidoId}")
-    public ResponseEntity<List<Cotizacion>> porPedido(@PathVariable UUID pedidoId) {
-        return ResponseEntity.ok(service.listarPorPedido(pedidoId));
+    public ResponseEntity<List<CotizacionResponse>> porPedido(@PathVariable UUID pedidoId) {
+        return ResponseEntity.ok(service.listarPorPedido(pedidoId).stream()
+                .map(service::toResponse).collect(Collectors.toList()));
     }
 
-    // POST /api/financiero/cotizaciones
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLEADO')")
-    public ResponseEntity<Cotizacion> crear(@RequestBody CotizacionRequest req,
-                                            @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(service.crear(req, user));
+    public ResponseEntity<CotizacionResponse> crear(@RequestBody CotizacionRequest req,
+                                                    @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(service.toResponse(service.crear(req, user)));
     }
 
-    // POST /api/financiero/cotizaciones/{id}/aprobar
     @PostMapping("/{id}/aprobar")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLEADO')")
-    public ResponseEntity<Cotizacion> aprobar(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.aprobar(id));
+    public ResponseEntity<CotizacionResponse> aprobar(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.toResponse(service.aprobar(id)));
     }
 
-    // POST /api/financiero/cotizaciones/{id}/cancelar
     @PostMapping("/{id}/cancelar")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLEADO')")
-    public ResponseEntity<Cotizacion> cancelar(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.cancelar(id));
+    public ResponseEntity<CotizacionResponse> cancelar(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.toResponse(service.cancelar(id)));
     }
 
-    // El cliente aprueba su cotización e indica cómo va a pagar
     @PostMapping("/{id}/aprobar-cliente")
-    public ResponseEntity<?> aprobarPorCliente(
+    public ResponseEntity<CotizacionResponse> aprobarPorCliente(
             @PathVariable UUID id,
             @RequestBody AprobarCotizacionRequest req) {
-        return ResponseEntity.ok(service.aprobarPorCliente(id, req));
+        return ResponseEntity.ok(service.toResponse(service.aprobarPorCliente(id, req)));
     }
 }

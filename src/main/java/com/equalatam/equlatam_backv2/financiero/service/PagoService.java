@@ -4,6 +4,7 @@ package com.equalatam.equlatam_backv2.financiero.service;
 import com.equalatam.equlatam_backv2.cliente.repositories.ClienteRepository;
 import com.equalatam.equlatam_backv2.entity.User;
 import com.equalatam.equlatam_backv2.financiero.dto.PagoRequest;
+import com.equalatam.equlatam_backv2.financiero.dto.PagoResponse;
 import com.equalatam.equlatam_backv2.financiero.entity.Factura;
 import com.equalatam.equlatam_backv2.financiero.entity.Pago;
 import com.equalatam.equlatam_backv2.financiero.enums.EstadoFactura;
@@ -123,5 +124,33 @@ public class PagoService {
     public Pago obtener(UUID id) {
         return pagoRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Pago no encontrado: " + id));
+    }
+
+    public PagoResponse toResponse(Pago p) {
+        PagoResponse r = new PagoResponse();
+        r.setId(p.getId());
+        r.setNumeroPago(p.getNumeroPago());
+        r.setEstado(p.getEstado() != null ? p.getEstado().name() : null);
+        r.setMonto(p.getMonto());
+        r.setFormaPago(p.getFormaPago() != null ? p.getFormaPago().name() : null);
+        r.setReferencia(p.getReferencia());
+        r.setBanco(p.getBanco());
+        r.setComprobanteUrl(p.getComprobanteUrl());
+        r.setObservaciones(p.getObservaciones());
+        r.setFechaPago(p.getFechaPago() != null ? p.getFechaPago().toString() : null);
+        r.setFechaConfirmacion(p.getFechaConfirmacion() != null
+                ? p.getFechaConfirmacion().toString() : null);
+        r.setRegistradoPor(p.getRegistradoPor() != null
+                ? p.getRegistradoPor().getUsername() : null);
+        r.setConfirmadoPor(p.getConfirmadoPor() != null
+                ? p.getConfirmadoPor().getUsername() : null);
+        if (p.getFactura() != null) {
+            r.setFacturaNumero(p.getFactura().getNumeroFactura());
+            if (p.getFactura().getCliente() != null) {
+                r.setClienteNombre(p.getFactura().getCliente().getNombres()
+                        + " " + p.getFactura().getCliente().getApellidos());
+            }
+        }
+        return r;
     }
 }
