@@ -3,7 +3,9 @@ package com.equalatam.equlatam_backv2.financiero.service;
 import com.equalatam.equlatam_backv2.cliente.repositories.ClienteRepository;
 import com.equalatam.equlatam_backv2.entity.User;
 import com.equalatam.equlatam_backv2.financiero.dto.FacturaDetalleRequest;
+import com.equalatam.equlatam_backv2.financiero.dto.FacturaDetalleResponse;
 import com.equalatam.equlatam_backv2.financiero.dto.FacturaRequest;
+import com.equalatam.equlatam_backv2.financiero.dto.FacturaResponse;
 import com.equalatam.equlatam_backv2.financiero.entity.*;
 import com.equalatam.equlatam_backv2.financiero.enums.*;
 import com.equalatam.equlatam_backv2.financiero.repository.*;
@@ -11,6 +13,7 @@ import com.equalatam.equlatam_backv2.pedidos.repository.PedidoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 import java.time.LocalDate;
 import java.util.List;
@@ -229,5 +232,50 @@ public class FacturaService {
             sb.append(" - ").append(String.format("%.2f", cot.getPesoFacturable())).append(" lbs");
         }
         return sb.toString();
+    }
+
+
+    public FacturaResponse toResponse(Factura f) {
+        FacturaResponse r = new FacturaResponse();
+        r.setId(f.getId());
+        r.setNumeroFactura(f.getNumeroFactura());
+        r.setTipoDocumento(f.getTipoDocumento() != null ? f.getTipoDocumento().name() : null);
+        r.setEstado(f.getEstado() != null ? f.getEstado().name() : null);
+        r.setFormaPago(f.getFormaPago() != null ? f.getFormaPago().name() : null);
+        r.setSubtotal0(f.getSubtotal0());
+        r.setSubtotal15(f.getSubtotal15());
+        r.setDescuento(f.getDescuento());
+        r.setIva(f.getIva());
+        r.setTotal(f.getTotal());
+        r.setFechaEmision(f.getFechaEmision());
+        r.setFechaVencimiento(f.getFechaVencimiento());
+        r.setObservaciones(f.getObservaciones());
+        r.setEmisorRuc(f.getEmisorRuc());
+        r.setEmisorRazonSocial(f.getEmisorRazonSocial());
+        r.setCreadoEn(f.getCreadoEn() != null ? f.getCreadoEn().toString() : null);
+        if (f.getCliente() != null) {
+            r.setClienteNombre(f.getCliente().getNombres() + " " + f.getCliente().getApellidos());
+            r.setClienteIdentificacion(f.getCliente().getNumeroIdentificacion());
+            r.setClienteEmail(f.getCliente().getEmail());
+            r.setClienteDireccion(f.getCliente().getDireccion());
+        }
+        if (f.getPedido() != null) {
+            r.setPedidoNumero(f.getPedido().getNumeroPedido());
+        }
+        if (f.getDetalles() != null) {
+            r.setDetalles(f.getDetalles().stream().map(d -> {
+                FacturaDetalleResponse dr = new FacturaDetalleResponse();
+                dr.setId(d.getId());
+                dr.setDescripcion(d.getDescripcion());
+                dr.setCantidad(d.getCantidad());
+                dr.setPrecioUnitario(d.getPrecioUnitario());
+                dr.setDescuento(d.getDescuento());
+                dr.setSubtotal(d.getSubtotal());
+                dr.setGravaIva(d.isGravaIva());
+                dr.setOrden(d.getOrden());
+                return dr;
+            }).collect(java.util.stream.Collectors.toList()));
+        }
+        return r;
     }
 }
