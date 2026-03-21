@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -119,9 +120,10 @@ public class ClienteController {
 
     // ─── CLIENTE autenticado ve su propio perfil ──────────────────────────────
     @GetMapping("/api/clientes/me")
-    public ResponseEntity<ClienteResponse> getMe(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(
-                clienteService.findByUsername(userDetails.getUsername()));
+    public ResponseEntity<ClienteResponse> getMe() {
+        String username = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+        return ResponseEntity.ok(clienteService.findByUsername(username));
     }
 }
