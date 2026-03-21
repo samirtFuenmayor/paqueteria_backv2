@@ -2,6 +2,7 @@ package com.equalatam.equlatam_backv2.financiero.service;
 
 import com.equalatam.equlatam_backv2.cliente.repositories.ClienteRepository;
 import com.equalatam.equlatam_backv2.entity.User;
+import com.equalatam.equlatam_backv2.financiero.dto.AprobarCotizacionRequest;
 import com.equalatam.equlatam_backv2.financiero.dto.CotizacionRequest;
 import com.equalatam.equlatam_backv2.financiero.entity.Cotizacion;
 import com.equalatam.equlatam_backv2.financiero.entity.Tarifa;
@@ -28,6 +29,7 @@ public class CotizacionService {
     private final TarifaRepository     tarifaRepo;
     private final TarifaService        tarifaService;
     private final NumeroSecuencialService secuencialService;
+
 
     // ─── Crear cotización ─────────────────────────────────────────────────────
 
@@ -161,5 +163,32 @@ public class CotizacionService {
                     c.setEstado(EstadoCotizacion.VENCIDA);
                     repo.save(c);
                 });
+    }
+
+    @Transactional
+    public Cotizacion aprobarPorCliente(UUID id, AprobarCotizacionRequest req) {
+        Cotizacion c = obtener(id);
+
+        if (c.getEstado() != EstadoCotizacion.PENDIENTE) {
+            throw new RuntimeException("La cotización no está en estado PENDIENTE");
+        }
+        if (LocalDate.now().isAfter(c.getValidaHasta())) {
+            c.setEstado(EstadoCotizacion.VENCIDA);
+            repo.save(c);
+            throw new RuntimeException("La cotización ha vencido");
+        }
+
+        // Aprobar
+        c.setEstado(EstadoCotizacion.APROBADA);
+
+        // Guardar la forma de pago elegida por el cliente en las observaciones
+        // hasta que el admin cree el Pago formal
+        String infoPago = String.format("[PAGO CLIENTE] Forma: %s | Ref: %s | %s",
+                req.formaPago(),
+                req.referenciaPago() != null ? req.referenciaPago() : "N/A",
+                req.observaciones() != null ? req.observaciones() : "");
+        c.setObservaciones(infoPago);
+
+        return repo.save(c);
     }
 }

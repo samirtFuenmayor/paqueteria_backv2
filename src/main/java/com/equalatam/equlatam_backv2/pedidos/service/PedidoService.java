@@ -3,8 +3,14 @@ package com.equalatam.equlatam_backv2.pedidos.service;
 import com.equalatam.equlatam_backv2.cliente.entity.Cliente;
 import com.equalatam.equlatam_backv2.cliente.repositories.ClienteRepository;
 import com.equalatam.equlatam_backv2.exception.ResourceNotFoundException;
+import com.equalatam.equlatam_backv2.financiero.dto.CotizacionRequest;
+import com.equalatam.equlatam_backv2.financiero.enums.EstadoCotizacion;
+import com.equalatam.equlatam_backv2.financiero.repository.CotizacionRepository;
+import com.equalatam.equlatam_backv2.financiero.repository.FacturaRepository;
+import com.equalatam.equlatam_backv2.financiero.service.CotizacionService;
 import com.equalatam.equlatam_backv2.pedidos.dto.request.PedidoRequest;
 import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResponse;
+import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResumenResponse;
 import com.equalatam.equlatam_backv2.pedidos.entity.EstadoPedido;
 import com.equalatam.equlatam_backv2.pedidos.entity.Pedido;
 import com.equalatam.equlatam_backv2.pedidos.entity.TipoPedido;
@@ -33,8 +39,10 @@ public class PedidoService {
     private final SucursalRepository sucursalRepository;
     private final UserRepository userRepository;
     private final TrackingService trackingService; // ← NUEVO
-
-
+    // ─── Agrega esta dependencia en la clase ─────────────────────────────────
+    private final CotizacionService cotizacionService;
+    private final CotizacionRepository cotizacionRepository;
+    private final FacturaRepository facturaRepository;
 
     // ─── Crear pedido ─────────────────────────────────────────────────────────
     @Transactional
@@ -85,6 +93,24 @@ public class PedidoService {
 
         Pedido guardado = pedidoRepository.save(pedido);
        // notificacionService.notificarPedidoRegistrado(guardado);
+        // ─── Auto-generar cotización si el cliente la solicitó ───────────────────
+        if (Boolean.TRUE.equals(req.solicitaCotizacion())) {
+            if (req.peso() == null || req.categoria() == null) {
+                throw new IllegalArgumentException(
+                        "Para solicitar cotización se requiere peso y categoría del paquete");
+            }
+            CotizacionRequest cotReq = new CotizacionRequest();
+            cotReq.setClienteId(req.clienteId());
+            cotReq.setPedidoId(guardado.getId());
+            cotReq.setPesoReal(req.peso());
+            cotReq.setLargo(req.largo());
+            cotReq.setAncho(req.ancho());
+            cotReq.setAlto(req.alto());
+            cotReq.setValorDeclarado(req.valorDeclarado());
+            cotReq.setCategoria(req.categoria());
+
+            cotizacionService.crear(cotReq, null); // null = sistema, no un operador
+        }
 
         // ── Registrar primer evento de tracking automáticamente ───────────────
         trackingService.registrarEvento(
@@ -278,5 +304,82 @@ public class PedidoService {
         return pedidoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Pedido no encontrado: " + id));
+    }
+
+    // ─── Resumen por cliente (logístico + financiero) ─────────────────────────
+    public List<PedidoResumenResponse> resumenPorCliente(UUID clienteId) {
+        return pedidoRepository.findByClienteId(clienteId)
+                .stream()
+                .map(pedido -> {
+                    // Buscar cotización activa del pedido
+                    var cotizaciones = cotizacionRepository.findByPedidoId(pedido.getId());
+                    var cot = cotizaciones.isEmpty() ? null : cotizaciones.get(0);
+
+                    // Buscar factura del pedido
+                    var facturas = facturaRepository.findByPedidoId(pedido.getId());
+                    var fac = facturas.isEmpty() ? null : facturas.get(0);
+
+                    // Determinar estado financiero
+                    String estadoFin;
+                    if (fac != null) {
+                        estadoFin = fac.getEstado().name(); // EMITIDA, PAGADA, etc.
+                    } else if (cot != null) {
+                        estadoFin = switch (cot.getEstado()) {
+                            case PENDIENTE -> "COTIZADO";
+                            case APROBADA  -> "PENDIENTE_PAGO";
+                            default        -> cot.getEstado().name();
+                        };
+                    } else {
+                        estadoFin = "SIN_COTIZAR";
+                    }
+
+                    return new PedidoResumenResponse(
+                            pedido.getId(),
+                            pedido.getNumeroPedido(),
+                            pedido.getTipo(),
+                            pedido.getDescripcion(),
+                            pedido.getEstado(),
+                            estadoFin,
+                            cot != null ? cot.getId() : null,
+                            cot != null ? cot.getTotal() : null,
+                            fac != null ? fac.getId() : null,
+                            fac != null ? fac.getNumeroFactura() : null,
+                            fac != null ? fac.getTotal() : null,
+                            pedido.getFechaRegistro()
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
+    public List<PedidoResumenResponse> pedidosPendientesFacturar() {
+        // Pedidos que tienen pago aprobado pero aún no tienen factura emitida
+        return pedidoRepository.findAll()
+                .stream()
+                .map(pedido -> {
+                    var facturas = facturaRepository.findByPedidoId(pedido.getId());
+                    var fac = facturas.isEmpty() ? null : facturas.get(0);
+                    var cotizaciones = cotizacionRepository.findByPedidoId(pedido.getId());
+                    var cot = cotizaciones.isEmpty() ? null : cotizaciones.get(0);
+
+                    // Solo incluir los que tienen cotización APROBADA y sin factura todavía
+                    if (fac != null) return null;
+                    if (cot == null) return null;
+                    if (cot.getEstado() != EstadoCotizacion.APROBADA) return null;
+
+                    return new PedidoResumenResponse(
+                            pedido.getId(),
+                            pedido.getNumeroPedido(),
+                            pedido.getTipo(),
+                            pedido.getDescripcion(),
+                            pedido.getEstado(),
+                            "LISTO_PARA_FACTURAR",
+                            cot.getId(),
+                            cot.getTotal(),
+                            null, null, null,
+                            pedido.getFechaRegistro()
+                    );
+                })
+                .filter(r -> r != null)
+                .collect(Collectors.toList());
     }
 }

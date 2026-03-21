@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.List;
 import java.util.Map;
@@ -113,5 +115,13 @@ public class ClienteController {
             @RequestBody GestionTitularRequest body) {
         return ResponseEntity.ok(
                 clienteService.gestionarTitular(id, body.titularId(), body.parentesco()));
+    }
+
+    // ─── CLIENTE autenticado ve su propio perfil ──────────────────────────────
+    @GetMapping("/api/clientes/me")
+    public ResponseEntity<ClienteResponse> getMe(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(
+                clienteService.findByUsername(userDetails.getUsername()));
     }
 }

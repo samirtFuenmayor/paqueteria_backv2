@@ -33,4 +33,6 @@ public interface ClienteRepository extends JpaRepository<Cliente, UUID> {
             "c.numeroIdentificacion LIKE CONCAT('%', :q, '%') OR " +
             "c.casillero LIKE CONCAT('%', :q, '%')")
     List<Cliente> buscar(@Param("q") String query);
+
+    Optional<Cliente> findByUserUsername(String username);
 }

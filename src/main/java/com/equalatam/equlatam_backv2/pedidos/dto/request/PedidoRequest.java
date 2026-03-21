@@ -5,6 +5,7 @@ import com.equalatam.equlatam_backv2.pedidos.entity.TipoPedido;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import com.equalatam.equlatam_backv2.financiero.enums.CategoriaPaquete;
 
 import java.util.UUID;
 
@@ -46,5 +47,10 @@ public record PedidoRequest(
 
         String observaciones,
         String notasInternas,
-        String fotoUrl
+        String fotoUrl,
+
+        // ─── NUEVOS campos para cotización automática ─────────────────────────
+        Boolean solicitaCotizacion,   // true = generar cotización al registrar
+        CategoriaPaquete categoria      // necesaria para buscar la tarifa correcta
+
 ) {}

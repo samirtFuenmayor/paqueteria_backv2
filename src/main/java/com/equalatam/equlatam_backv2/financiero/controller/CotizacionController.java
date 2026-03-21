@@ -1,6 +1,7 @@
 package com.equalatam.equlatam_backv2.financiero.controller;
 
 import com.equalatam.equlatam_backv2.entity.User;
+import com.equalatam.equlatam_backv2.financiero.dto.AprobarCotizacionRequest;
 import com.equalatam.equlatam_backv2.financiero.dto.CotizacionRequest;
 import com.equalatam.equlatam_backv2.financiero.entity.Cotizacion;
 import com.equalatam.equlatam_backv2.financiero.service.CotizacionService;
@@ -66,5 +67,13 @@ public class CotizacionController {
     @PreAuthorize("hasAnyRole('ADMIN','EMPLEADO')")
     public ResponseEntity<Cotizacion> cancelar(@PathVariable UUID id) {
         return ResponseEntity.ok(service.cancelar(id));
+    }
+
+    // El cliente aprueba su cotización e indica cómo va a pagar
+    @PostMapping("/{id}/aprobar-cliente")
+    public ResponseEntity<?> aprobarPorCliente(
+            @PathVariable UUID id,
+            @RequestBody AprobarCotizacionRequest req) {
+        return ResponseEntity.ok(service.aprobarPorCliente(id, req));
     }
 }
