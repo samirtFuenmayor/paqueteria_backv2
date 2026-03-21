@@ -4,6 +4,7 @@ import com.equalatam.equlatam_backv2.cliente.entity.Cliente;
 import com.equalatam.equlatam_backv2.entity.User;
 import com.equalatam.equlatam_backv2.financiero.enums.*;
 import com.equalatam.equlatam_backv2.pedidos.entity.Pedido;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -45,6 +46,7 @@ public class Factura {
     private TipoDocumento tipoDocumento = TipoDocumento.FACTURA;
 
     // ─── Relaciones ───────────────────────────────────────────────────────────
+
     @ManyToOne
     @JoinColumn(name = "cliente_id", nullable = false)
     private Cliente cliente;
