@@ -2,6 +2,7 @@ package com.equalatam.equlatam_backv2.pedidos.controller;
 
 import com.equalatam.equlatam_backv2.pedidos.dto.request.PedidoRequest;
 import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResponse;
+import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResumenResponse;
 import com.equalatam.equlatam_backv2.pedidos.entity.EstadoPedido;
 import com.equalatam.equlatam_backv2.pedidos.service.PedidoService;
 import jakarta.validation.Valid;
@@ -110,5 +111,16 @@ public class PedidoController {
 
         return ResponseEntity.ok(
                 pedidoService.cambiarEstado(id, estado, observacion, username, sucursalId));
+    }
+
+    @GetMapping("/cliente/{clienteId}/resumen")
+    public ResponseEntity<List<PedidoResumenResponse>> resumenCliente(
+            @PathVariable UUID clienteId) {
+        return ResponseEntity.ok(pedidoService.resumenPorCliente(clienteId));
+    }
+
+    @GetMapping("/admin/pendientes-facturar")
+    public ResponseEntity<List<PedidoResumenResponse>> pendientesFacturar() {
+        return ResponseEntity.ok(pedidoService.pedidosPendientesFacturar());
     }
 }

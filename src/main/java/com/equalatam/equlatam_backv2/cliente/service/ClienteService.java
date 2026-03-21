@@ -329,4 +329,12 @@ public class ClienteService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Sucursal no encontrada: " + id));
     }
+
+    // ─── Cliente autenticado ve su propio perfil ──────────────────────────────
+    public ClienteResponse findByUsername(String username) {
+        return ClienteResponse.from(
+                clienteRepository.findByUserUsername(username)
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "Cliente no encontrado para el usuario: " + username)));
+    }
 }
