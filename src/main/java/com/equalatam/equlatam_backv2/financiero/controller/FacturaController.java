@@ -1,21 +1,19 @@
-// ─── FacturaController.java ───────────────────────────────────────────────────
 package com.equalatam.equlatam_backv2.financiero.controller;
 
-import com.equalatam.equlatam_backv2.entity.User;
 import com.equalatam.equlatam_backv2.financiero.dto.FacturaRequest;
-import com.equalatam.equlatam_backv2.financiero.entity.Factura;
+import com.equalatam.equlatam_backv2.financiero.dto.FacturaResponse;
 import com.equalatam.equlatam_backv2.financiero.service.FacturaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/financiero/facturas")
@@ -24,66 +22,54 @@ public class FacturaController {
 
     private final FacturaService service;
 
-    // GET /api/financiero/facturas/pendientes
     @GetMapping("/pendientes")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLEADO')")
-    public ResponseEntity<List<Factura>> pendientes() {
-        return ResponseEntity.ok(service.listarPendientes());
+    public ResponseEntity<List<FacturaResponse>> pendientes() {
+        return ResponseEntity.ok(service.listarPendientes().stream()
+                .map(service::toResponse).collect(Collectors.toList()));
     }
 
-    // GET /api/financiero/facturas/{id}
     @GetMapping("/{id}")
-    public ResponseEntity<Factura> obtener(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.obtener(id));
+    public ResponseEntity<FacturaResponse> obtener(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.toResponse(service.obtener(id)));
     }
 
-    // GET /api/financiero/facturas/cliente/{clienteId}
     @GetMapping("/cliente/{clienteId}")
-    public ResponseEntity<List<Factura>> porCliente(@PathVariable UUID clienteId) {
-        return ResponseEntity.ok(service.listarPorCliente(clienteId));
+    public ResponseEntity<List<FacturaResponse>> porCliente(@PathVariable UUID clienteId) {
+        return ResponseEntity.ok(service.listarPorCliente(clienteId).stream()
+                .map(service::toResponse).collect(Collectors.toList()));
     }
 
-    // GET /api/financiero/facturas/pedido/{pedidoId}
     @GetMapping("/pedido/{pedidoId}")
-    public ResponseEntity<List<Factura>> porPedido(@PathVariable UUID pedidoId) {
-        return ResponseEntity.ok(service.listarPorPedido(pedidoId));
+    public ResponseEntity<List<FacturaResponse>> porPedido(@PathVariable UUID pedidoId) {
+        return ResponseEntity.ok(service.listarPorPedido(pedidoId).stream()
+                .map(service::toResponse).collect(Collectors.toList()));
     }
 
-    // GET /api/financiero/facturas/rango?desde=2026-01-01&hasta=2026-03-31
     @GetMapping("/rango")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLEADO')")
-    public ResponseEntity<List<Factura>> porRango(
+    public ResponseEntity<List<FacturaResponse>> porRango(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
-        return ResponseEntity.ok(service.listarPorRango(desde, hasta));
+        return ResponseEntity.ok(service.listarPorRango(desde, hasta).stream()
+                .map(service::toResponse).collect(Collectors.toList()));
     }
 
-    // POST /api/financiero/facturas
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLEADO')")
-    public ResponseEntity<Factura> crear(@RequestBody FacturaRequest req,
-                                         @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(service.crear(req, user));
+    public ResponseEntity<FacturaResponse> crear(@RequestBody FacturaRequest req) {
+        return ResponseEntity.ok(service.toResponse(service.crear(req, null)));
     }
 
-    // POST /api/financiero/facturas/{id}/emitir
     @PostMapping("/{id}/emitir")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLEADO')")
-    public ResponseEntity<Factura> emitir(@PathVariable UUID id,
-                                          @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(service.emitir(id, user));
+    public ResponseEntity<FacturaResponse> emitir(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.toResponse(service.emitir(id, null)));
     }
 
-    // POST /api/financiero/facturas/{id}/anular
     @PostMapping("/{id}/anular")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Factura> anular(@PathVariable UUID id,
-                                          @RequestBody Map<String, String> body,
-                                          @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(service.anular(id, body.get("motivo"), user));
+    public ResponseEntity<FacturaResponse> anular(@PathVariable UUID id,
+                                                  @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(service.toResponse(
+                service.anular(id, body.get("motivo"), null)));
     }
 
-    // GET /api/financiero/facturas/cliente/{clienteId}/deuda
     @GetMapping("/cliente/{clienteId}/deuda")
     public ResponseEntity<Map<String, Double>> deudaCliente(@PathVariable UUID clienteId) {
         return ResponseEntity.ok(Map.of("deuda", service.getDeudaCliente(clienteId)));
