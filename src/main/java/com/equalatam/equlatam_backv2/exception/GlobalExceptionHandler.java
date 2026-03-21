@@ -60,6 +60,7 @@ public class GlobalExceptionHandler {
     // ─── Cualquier otro error → 500 ───────────────────────────────────────────
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
+        ex.printStackTrace();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of(500, "Internal Server Error", "Ocurrió un error inesperado"));
     }
