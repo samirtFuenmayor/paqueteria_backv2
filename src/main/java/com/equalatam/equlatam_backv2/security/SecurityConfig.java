@@ -61,36 +61,28 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                // ── Públicas sin token ─────────────────────────────────────────
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/tracking/public/**").permitAll()
-                                .requestMatchers("/api/clientes/me").authenticated()
-                // ── CLIENTE ───────────────────────────────────────────────────
-                .requestMatchers(HttpMethod.POST,  "/api/pedidos").hasAnyRole("CLIENTE","ADMIN")
-                .requestMatchers(HttpMethod.GET,   "/api/pedidos/cliente/**").hasAnyRole("CLIENTE","ADMIN")
-                .requestMatchers(HttpMethod.POST,  "/api/financiero/cotizaciones/*/aprobar-cliente").hasAnyRole("CLIENTE","ADMIN")
-                .requestMatchers(HttpMethod.GET,   "/api/financiero/cotizaciones/*/cliente/**").hasAnyRole("CLIENTE","ADMIN")
-                .requestMatchers(HttpMethod.GET,   "/api/financiero/facturas/cliente/**").hasAnyRole("CLIENTE","ADMIN")
-                .requestMatchers(HttpMethod.GET,   "/api/tracking/**").hasAnyRole("CLIENTE","ADMIN","SUPERVISOR","CAJERO")
-
-                // ── CAJERO (facturación) ───────────────────────────────────────
-                .requestMatchers("/api/financiero/**").hasAnyRole("CAJERO","ADMIN")
-                .requestMatchers(HttpMethod.GET, "/api/pedidos/admin/**").hasAnyRole("CAJERO","ADMIN")
-
-                // ── SUPERVISOR (despachos) ─────────────────────────────────────
-                .requestMatchers("/api/despachos/**").hasAnyRole("SUPERVISOR","ADMIN")
-                .requestMatchers("/api/guias/**").hasAnyRole("SUPERVISOR","ADMIN")
-                .requestMatchers(HttpMethod.PATCH, "/api/pedidos/*/estado").hasAnyRole("SUPERVISOR","ADMIN")
-
-                // ── ADMIN (todo) ───────────────────────────────────────────────
-                .requestMatchers("/api/users/**").hasRole("ADMIN")
-                .requestMatchers("/api/roles/**").hasRole("ADMIN")
-                .requestMatchers("/api/permissions/**").hasRole("ADMIN")
-                .requestMatchers("/api/clientes/**").hasAnyRole("ADMIN","CAJERO")
-                .requestMatchers("/api/sucursales/**").hasAnyRole("ADMIN","SUPERVISOR")
-
-                .anyRequest().authenticated()
-                 )
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/tracking/public/**").permitAll()
+                        .requestMatchers("/api/clientes/me").authenticated()
+                        .requestMatchers(HttpMethod.POST,  "/api/pedidos").hasAnyRole("CLIENTE","ADMIN")
+                        .requestMatchers(HttpMethod.GET,   "/api/pedidos/cliente/**").hasAnyRole("CLIENTE","ADMIN")
+                        .requestMatchers(HttpMethod.POST,  "/api/financiero/cotizaciones/*/aprobar-cliente").hasAnyRole("CLIENTE","ADMIN")
+                        .requestMatchers(HttpMethod.GET,   "/api/financiero/cotizaciones/*/cliente/**").hasAnyRole("CLIENTE","ADMIN")
+                        .requestMatchers(HttpMethod.GET,   "/api/financiero/facturas/cliente/**").hasAnyRole("CLIENTE","ADMIN")
+                        .requestMatchers(HttpMethod.GET,   "/api/tracking/**").hasAnyRole("CLIENTE","ADMIN","SUPERVISOR","CAJERO")
+                        .requestMatchers("/api/financiero/**").hasAnyRole("CAJERO","ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/pedidos/admin/**").hasAnyRole("CAJERO","ADMIN")
+                        .requestMatchers("/api/despachos/**").hasAnyRole("SUPERVISOR","ADMIN")
+                        .requestMatchers("/api/guias/**").hasAnyRole("SUPERVISOR","ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/pedidos/*/estado").hasAnyRole("SUPERVISOR","ADMIN")
+                        .requestMatchers("/api/users/**").hasRole("ADMIN")
+                        .requestMatchers("/api/roles/**").hasRole("ADMIN")
+                        .requestMatchers("/api/permissions/**").hasRole("ADMIN")
+                        .requestMatchers("/api/clientes/**").hasAnyRole("ADMIN","CAJERO")
+                        .requestMatchers("/api/sucursales/**").hasAnyRole("ADMIN","SUPERVISOR")
+                        .requestMatchers("/api/pedidos/**").authenticated()
+                        .anyRequest().authenticated()
+                )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
