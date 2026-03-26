@@ -468,23 +468,31 @@ public class PedidoService {
         long faltantes = items.stream().filter(i -> !Boolean.TRUE.equals(i.getLlego())).count();
 
         if (faltantes == 0) {
-            // Todos llegaron — flujo normal
             pedido.setEstado(EstadoPedido.RECIBIDO_EN_SEDE);
-            trackingService.registrarEvento(pedido, EstadoPedido.RECIBIDO_EN_SEDE,
-                    "Todos los items recibidos en sede (" + llegaron + " items)",
-                    username, pedido.getSucursalOrigen() != null
-                            ? pedido.getSucursalOrigen().getId() : null, null, true, null);
         } else {
-            // Faltan items — esperar decisión del cliente
             pedido.setEstado(EstadoPedido.RECEPCION_PARCIAL);
-            trackingService.registrarEvento(pedido, EstadoPedido.RECEPCION_PARCIAL,
-                    "Recepción parcial: llegaron " + llegaron + " de " + items.size()
-                            + " items. Faltan " + faltantes + ".",
-                    username, pedido.getSucursalOrigen() != null
-                            ? pedido.getSucursalOrigen().getId() : null, null, true, null);
         }
 
-        return PedidoResponse.from(pedidoRepository.save(pedido));
+        Pedido guardado = pedidoRepository.save(pedido);
+
+        // Registrar tracking sin bloquear si falla
+        try {
+            String desc = faltantes == 0
+                    ? "Todos los items recibidos en sede (" + llegaron + " items)"
+                    : "Recepción parcial: llegaron " + llegaron + " de " + items.size()
+                      + " items. Faltan " + faltantes + ".";
+
+            trackingService.registrarEvento(guardado,
+                    faltantes == 0 ? EstadoPedido.RECIBIDO_EN_SEDE : EstadoPedido.RECEPCION_PARCIAL,
+                    desc, username,
+                    pedido.getSucursalOrigen() != null ? pedido.getSucursalOrigen().getId() : null,
+                    null, true, null);
+        } catch (Exception e) {
+            // Log pero no bloquear
+            System.err.println("Warning tracking: " + e.getMessage());
+        }
+
+        return PedidoResponse.from(guardado);
     }
 
     // ─── Cliente decide despachar parcial o esperar ───────────────────────────────
