@@ -1,6 +1,7 @@
 package com.equalatam.equlatam_backv2.pedidos.dto.response;
 
 
+import com.equalatam.equlatam_backv2.pedidos.entity.CategoriaPedido;
 import com.equalatam.equlatam_backv2.pedidos.entity.EstadoPedido;
 import com.equalatam.equlatam_backv2.pedidos.entity.Pedido;
 import com.equalatam.equlatam_backv2.pedidos.entity.TipoPedido;
@@ -56,7 +57,13 @@ public record PedidoResponse(
 
         String observaciones,
         String notasInternas,
-        String fotoUrl
+        String fotoUrl,
+
+        CategoriaPedido categoriaPedido,
+        Boolean esPorTitular,
+        java.util.List<PedidoItemResponse> items,
+        Double pesoTotal,
+        String tipoTarifa
 ) {
     public static PedidoResponse from(Pedido p) {
         return new PedidoResponse(
@@ -102,7 +109,16 @@ public record PedidoResponse(
 
                 p.getObservaciones(),
                 p.getNotasInternas(),
-                p.getFotoUrl()
+                p.getFotoUrl(),
+                p.getCategoria(),
+                p.getEsPorTitular(),
+                p.getItems() != null ? p.getItems().stream().map(PedidoItemResponse::from).collect(java.util.stream.Collectors.toList())
+                        : java.util.List.of(),
+                p.getPesoTotal(),
+                p.getTipoTarifa()
+
         );
     }
+
+
 }

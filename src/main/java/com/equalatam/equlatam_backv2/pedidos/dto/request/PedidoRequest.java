@@ -1,6 +1,7 @@
 package com.equalatam.equlatam_backv2.pedidos.dto.request;
 
 
+import com.equalatam.equlatam_backv2.pedidos.entity.CategoriaPedido;
 import com.equalatam.equlatam_backv2.pedidos.entity.TipoPedido;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -51,6 +52,12 @@ public record PedidoRequest(
 
         // ─── NUEVOS campos para cotización automática ─────────────────────────
         Boolean solicitaCotizacion,   // true = generar cotización al registrar
-        CategoriaPaquete categoria      // necesaria para buscar la tarifa correcta
+        CategoriaPaquete categoria,      // necesaria para buscar la tarifa correcta
+
+        // ─── NUEVOS campos categoría e items ─────────────────────────────────────────
+        CategoriaPedido categoriaPedido,
+        Boolean esPorTitular,
+        UUID titularId,
+        java.util.List<PedidoItemRequest> items
 
 ) {}

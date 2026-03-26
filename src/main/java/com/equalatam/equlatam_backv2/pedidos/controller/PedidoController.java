@@ -123,4 +123,40 @@ public class PedidoController {
     public ResponseEntity<List<PedidoResumenResponse>> pendientesFacturar() {
         return ResponseEntity.ok(pedidoService.pedidosPendientesFacturar());
     }
+
+    // ─── Admin marca qué items llegaron ──────────────────────────────────────────
+    @PatchMapping("/{pedidoId}/items/{itemId}/llegada")
+    public ResponseEntity<PedidoResponse> marcarItemLlegado(
+            @PathVariable UUID pedidoId,
+            @PathVariable UUID itemId,
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        Boolean llego = (Boolean) body.get("llego");
+        String observacion = (String) body.get("observacion");
+        String username = userDetails != null ? userDetails.getUsername() : null;
+
+        return ResponseEntity.ok(
+                pedidoService.marcarItemLlegado(pedidoId, itemId, llego, observacion, username));
+    }
+
+    // ─── Admin marca recepción completa y notifica al cliente ─────────────────────
+    @PostMapping("/{pedidoId}/confirmar-recepcion")
+    public ResponseEntity<PedidoResponse> confirmarRecepcion(
+            @PathVariable UUID pedidoId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        String username = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(pedidoService.confirmarRecepcion(pedidoId, username));
+    }
+
+    // ─── Cliente decide: despachar lo que llegó o esperar ────────────────────────
+    @PostMapping("/{pedidoId}/decision-despacho")
+    public ResponseEntity<PedidoResponse> decisionDespacho(
+            @PathVariable UUID pedidoId,
+            @RequestBody Map<String, String> body) {
+
+        boolean despacharParcial = Boolean.parseBoolean(body.get("despacharParcial"));
+        return ResponseEntity.ok(pedidoService.decisionDespacho(pedidoId, despacharParcial));
+    }
 }

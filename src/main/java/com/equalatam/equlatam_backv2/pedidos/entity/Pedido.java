@@ -95,4 +95,26 @@ public class Pedido {
     public void preUpdate() {
         this.actualizadoEn = LocalDateTime.now();
     }
+
+    // ─── Categoría del pedido ─────────────────────────────────────────────────────
+    @Enumerated(EnumType.STRING)
+    private CategoriaPedido categoria;
+
+    // ─── Pedido por titular ───────────────────────────────────────────────────────
+    private Boolean esPorTitular = false;
+
+    @ManyToOne
+    @JoinColumn(name = "titular_id")
+    private com.equalatam.equlatam_backv2.cliente.entity.Cliente titular;
+
+    // ─── Items del pedido ─────────────────────────────────────────────────────────
+    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private java.util.List<PedidoItem> items = new java.util.ArrayList<>();
+
+    // ─── Peso total calculado ─────────────────────────────────────────────────────
+    private Double pesoTotal = 0.0;
+
+    // ─── Tarifa aplicada ──────────────────────────────────────────────────────────
+    private String tipoTarifa = "INDIVIDUAL"; // INDIVIDUAL, FAMILIAR, AMIGO
+
 }

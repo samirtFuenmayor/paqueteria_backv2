@@ -20,5 +20,9 @@ public enum EstadoPedido {
     // ─── Estados finales ──────────────────────────────────────────────────────
     ENTREGADO,              // Cliente retiró el paquete
     DEVUELTO,               // Fue devuelto al remitente
-    EXTRAVIADO              // Paquete perdido
+    EXTRAVIADO,             // Paquete perdido
+
+    // ─── Estados de recepción parcial ─────────────────────────────────────────
+    RECEPCION_PARCIAL,      // Llegaron algunos items, pendiente decisión del cliente
+    ESPERANDO_ITEMS         // Cliente decidió esperar los items faltantes
 }

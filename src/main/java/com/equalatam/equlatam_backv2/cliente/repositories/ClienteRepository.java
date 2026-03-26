@@ -35,4 +35,10 @@ public interface ClienteRepository extends JpaRepository<Cliente, UUID> {
     List<Cliente> buscar(@Param("q") String query);
 
     Optional<Cliente> findByUserUsername(String username);
+
+    // Buscar afiliado con su parentesco
+    @Query("SELECT c FROM Cliente c WHERE c.titular.id = :titularId AND c.id = :afiliadoId")
+    Optional<Cliente> findAfiliadoByTitular(
+            @Param("titularId") UUID titularId,
+            @Param("afiliadoId") UUID afiliadoId);
 }
