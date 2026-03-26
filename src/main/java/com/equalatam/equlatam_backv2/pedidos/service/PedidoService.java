@@ -1,6 +1,7 @@
 package com.equalatam.equlatam_backv2.pedidos.service;
 
 import com.equalatam.equlatam_backv2.cliente.entity.Cliente;
+import com.equalatam.equlatam_backv2.cliente.entity.Parentesco;
 import com.equalatam.equlatam_backv2.cliente.repositories.ClienteRepository;
 import com.equalatam.equlatam_backv2.exception.ResourceNotFoundException;
 import com.equalatam.equlatam_backv2.financiero.dto.CotizacionRequest;
@@ -8,12 +9,15 @@ import com.equalatam.equlatam_backv2.financiero.enums.EstadoCotizacion;
 import com.equalatam.equlatam_backv2.financiero.repository.CotizacionRepository;
 import com.equalatam.equlatam_backv2.financiero.repository.FacturaRepository;
 import com.equalatam.equlatam_backv2.financiero.service.CotizacionService;
+import com.equalatam.equlatam_backv2.pedidos.dto.request.PedidoItemRequest;
 import com.equalatam.equlatam_backv2.pedidos.dto.request.PedidoRequest;
 import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResponse;
 import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResumenResponse;
 import com.equalatam.equlatam_backv2.pedidos.entity.EstadoPedido;
 import com.equalatam.equlatam_backv2.pedidos.entity.Pedido;
+import com.equalatam.equlatam_backv2.pedidos.entity.PedidoItem;
 import com.equalatam.equlatam_backv2.pedidos.entity.TipoPedido;
+import com.equalatam.equlatam_backv2.pedidos.repository.PedidoItemRepository;
 import com.equalatam.equlatam_backv2.pedidos.repository.PedidoRepository;
 import com.equalatam.equlatam_backv2.repository.UserRepository;
 import com.equalatam.equlatam_backv2.sucursales.entity.Sucursal;
@@ -43,6 +47,8 @@ public class PedidoService {
     private final CotizacionService cotizacionService;
     private final CotizacionRepository cotizacionRepository;
     private final FacturaRepository facturaRepository;
+    private final PedidoItemRepository pedidoItemRepository;
+
 
     // ─── Crear pedido ─────────────────────────────────────────────────────────
     @Transactional
@@ -85,6 +91,35 @@ public class PedidoService {
         pedido.setObservaciones(req.observaciones());
         pedido.setNotasInternas(req.notasInternas());
         pedido.setFotoUrl(req.fotoUrl());
+        // ─── Categoría y titular ──────────────────────────────────────────────────────
+        pedido.setCategoria(req.categoriaPedido());
+        pedido.setEsPorTitular(Boolean.TRUE.equals(req.esPorTitular()));
+
+        if (Boolean.TRUE.equals(req.esPorTitular()) && req.titularId() != null) {
+            clienteRepository.findById(req.titularId())
+                    .ifPresent(pedido::setTitular);
+        }
+
+        // ─── Items del pedido ─────────────────────────────────────────────────────────
+        if (req.items() != null && !req.items().isEmpty()) {
+            double pesoTotal = 0.0;
+            for (PedidoItemRequest itemReq : req.items()) {
+                PedidoItem item = new PedidoItem();
+                item.setPedido(pedido);
+                item.setTipoProducto(itemReq.tipoProducto());
+                item.setDescripcion(itemReq.descripcion());
+                item.setTrackingExterno(itemReq.trackingExterno());
+                item.setProveedor(itemReq.proveedor());
+                item.setPeso(itemReq.peso());
+                item.setValorDeclarado(itemReq.valorDeclarado());
+                item.setObservaciones(itemReq.observaciones());
+                item.setLlego(false);
+                item.setDespachado(false);
+                pedido.getItems().add(item);
+                if (itemReq.peso() != null) pesoTotal += itemReq.peso();
+            }
+            pedido.setPesoTotal(pesoTotal);
+        }
 
         if (usernameEmpleado != null) {
             userRepository.findByUsername(usernameEmpleado)
@@ -110,6 +145,27 @@ public class PedidoService {
             cotReq.setCategoria(req.categoria());
 
             cotizacionService.crear(cotReq, null); // null = sistema, no un operador
+        }
+
+        // ─── Tarifa por parentesco ────────────────────────────────────────────────────
+        if (Boolean.TRUE.equals(req.esPorTitular()) && req.titularId() != null) {
+            Cliente afiliado = clienteRepository.findById(req.clienteId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
+
+            if (afiliado.getTitular() == null ||
+                    !afiliado.getTitular().getId().equals(req.titularId())) {
+                throw new IllegalArgumentException(
+                        "El cliente no está afiliado al titular indicado");
+            }
+
+            // Determinar tipo de tarifa según parentesco
+            Parentesco parentesco = afiliado.getParentesco();
+            String tipoTarifa = switch (parentesco) {
+                case CONYUGE, HIJO, HIJA, PADRE, MADRE, HERMANO, HERMANA -> "FAMILIAR";
+                case AMIGO, OTRO -> "AMIGO";
+                case TITULAR -> "INDIVIDUAL";
+            };
+            pedido.setTipoTarifa(tipoTarifa);
         }
 
         // ── Registrar primer evento de tracking automáticamente ───────────────
@@ -286,6 +342,8 @@ public class PedidoService {
             case ENTREGADO              -> "Paquete entregado al cliente";
             case DEVUELTO               -> "Paquete devuelto al remitente";
             case EXTRAVIADO             -> "Paquete reportado como extraviado";
+            case RECEPCION_PARCIAL  -> "Recepción parcial, pendiente decisión del cliente";
+            case ESPERANDO_ITEMS    -> "Cliente esperando items faltantes en casillero";
         };
     }
 
@@ -381,5 +439,78 @@ public class PedidoService {
                 })
                 .filter(r -> r != null)
                 .collect(Collectors.toList());
+    }
+
+    // ─── Marcar item como llegado o no ───────────────────────────────────────────
+    @Transactional
+    public PedidoResponse marcarItemLlegado(UUID pedidoId, UUID itemId,
+                                            Boolean llego, String observacion,
+                                            String username) {
+        Pedido pedido = getPedidoOrThrow(pedidoId);
+
+        PedidoItem item = pedidoItemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Item no encontrado: " + itemId));
+
+        item.setLlego(llego);
+        if (observacion != null) item.setObservaciones(observacion);
+        pedidoItemRepository.save(item);
+
+        return PedidoResponse.from(pedido);
+    }
+
+    // ─── Admin confirma recepción — revisa si llegaron todos ─────────────────────
+    @Transactional
+    public PedidoResponse confirmarRecepcion(UUID pedidoId, String username) {
+        Pedido pedido = getPedidoOrThrow(pedidoId);
+
+        List<PedidoItem> items = pedidoItemRepository.findByPedidoId(pedidoId);
+        long llegaron  = items.stream().filter(i -> Boolean.TRUE.equals(i.getLlego())).count();
+        long faltantes = items.stream().filter(i -> !Boolean.TRUE.equals(i.getLlego())).count();
+
+        if (faltantes == 0) {
+            // Todos llegaron — flujo normal
+            pedido.setEstado(EstadoPedido.RECIBIDO_EN_SEDE);
+            trackingService.registrarEvento(pedido, EstadoPedido.RECIBIDO_EN_SEDE,
+                    "Todos los items recibidos en sede (" + llegaron + " items)",
+                    username, pedido.getSucursalOrigen() != null
+                            ? pedido.getSucursalOrigen().getId() : null, null, true, null);
+        } else {
+            // Faltan items — esperar decisión del cliente
+            pedido.setEstado(EstadoPedido.RECEPCION_PARCIAL);
+            trackingService.registrarEvento(pedido, EstadoPedido.RECEPCION_PARCIAL,
+                    "Recepción parcial: llegaron " + llegaron + " de " + items.size()
+                            + " items. Faltan " + faltantes + ".",
+                    username, pedido.getSucursalOrigen() != null
+                            ? pedido.getSucursalOrigen().getId() : null, null, true, null);
+        }
+
+        return PedidoResponse.from(pedidoRepository.save(pedido));
+    }
+
+    // ─── Cliente decide despachar parcial o esperar ───────────────────────────────
+    @Transactional
+    public PedidoResponse decisionDespacho(UUID pedidoId, boolean despacharParcial) {
+        Pedido pedido = getPedidoOrThrow(pedidoId);
+
+        if (pedido.getEstado() != EstadoPedido.RECEPCION_PARCIAL) {
+            throw new IllegalArgumentException(
+                    "El pedido no está en estado RECEPCION_PARCIAL");
+        }
+
+        if (despacharParcial) {
+            // Despachar solo lo que llegó
+            pedido.setEstado(EstadoPedido.RECIBIDO_EN_SEDE);
+            trackingService.registrarEvento(pedido, EstadoPedido.RECIBIDO_EN_SEDE,
+                    "Cliente aprobó despacho parcial de los items recibidos.",
+                    null, null, null, true, null);
+        } else {
+            // Esperar los items faltantes
+            pedido.setEstado(EstadoPedido.ESPERANDO_ITEMS);
+            trackingService.registrarEvento(pedido, EstadoPedido.ESPERANDO_ITEMS,
+                    "Cliente decidió esperar los items faltantes en casillero.",
+                    null, null, null, true, null);
+        }
+
+        return PedidoResponse.from(pedidoRepository.save(pedido));
     }
 }
