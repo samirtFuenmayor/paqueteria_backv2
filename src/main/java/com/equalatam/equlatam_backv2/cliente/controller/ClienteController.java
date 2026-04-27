@@ -5,6 +5,7 @@ import com.equalatam.equlatam_backv2.cliente.dto.request.ClienteRequest;
 import com.equalatam.equlatam_backv2.cliente.dto.request.GestionTitularRequest;
 import com.equalatam.equlatam_backv2.cliente.dto.response.ClienteResponse;
 import com.equalatam.equlatam_backv2.cliente.entity.EstadoCliente;
+import com.equalatam.equlatam_backv2.cliente.entity.Parentesco;
 import com.equalatam.equlatam_backv2.cliente.service.ClienteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -125,5 +126,26 @@ public class ClienteController {
                 .getAuthentication()
                 .getName();
         return ResponseEntity.ok(clienteService.findByUsername(username));
+    }
+
+
+    // POST /api/clientes/{titularId}/afiliados
+    @PostMapping("/api/clientes/{titularId}/afiliados")
+    public ResponseEntity<ClienteResponse> vincularAfiliado(
+            @PathVariable UUID titularId,
+            @RequestBody Map<String, String> body) {
+        UUID afiliadoId = UUID.fromString(body.get("afiliadoId"));
+        Parentesco parentesco = Parentesco.valueOf(body.get("parentesco"));
+        return ResponseEntity.ok(
+                clienteService.gestionarTitular(afiliadoId, titularId, parentesco));
+    }
+
+    // DELETE /api/clientes/{titularId}/afiliados/{afiliadoId}
+    @DeleteMapping("/api/clientes/{titularId}/afiliados/{afiliadoId}")
+    public ResponseEntity<Void> desvincularAfiliado(
+            @PathVariable UUID titularId,
+            @PathVariable UUID afiliadoId) {
+        clienteService.gestionarTitular(afiliadoId, null, null);
+        return ResponseEntity.noContent().build();
     }
 }
