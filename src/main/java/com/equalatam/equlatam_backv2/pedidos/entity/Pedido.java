@@ -120,12 +120,12 @@ public class Pedido {
     private String tipoTarifa = "INDIVIDUAL"; // INDIVIDUAL, FAMILIAR, AMIGO
 
     // ─── Pago ─────────────────────────────────────────────────────────────────────
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private FormaPago formaPago;
+    @Enumerated(EnumType.STRING)
+    private FormaPago formaPago = FormaPago.EFECTIVO;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private EstadoPago estadoPago = EstadoPago.PENDIENTE_COMPROBANTE;
 
     // Datos bancarios (solo para TRANSFERENCIA)
