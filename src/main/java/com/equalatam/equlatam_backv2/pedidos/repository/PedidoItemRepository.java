@@ -11,8 +11,6 @@ public interface PedidoItemRepository extends JpaRepository<PedidoItem, UUID> {
     List<PedidoItem> findByPedidoId(UUID pedidoId);
     List<PedidoItem> findByPedidoIdAndLlegoTrue(UUID pedidoId);
     List<PedidoItem> findByPedidoIdAndLlegoFalse(UUID pedidoId);
-    // Borrado masivo por pedido (usado al cancelar cotización)
-    void deleteAll(List<PedidoItem> items); // ya hereda de JpaRepository
 
     // Si quieres borrado directo sin cargar entidades:
     @org.springframework.data.jpa.repository.Modifying
