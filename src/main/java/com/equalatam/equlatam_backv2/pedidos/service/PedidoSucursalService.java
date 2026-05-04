@@ -1,6 +1,6 @@
 package com.equalatam.equlatam_backv2.pedidos.service;
 
-import com.equalatam.equlatam_backv2.cliente.dto.ClienteResponse;
+import com.equalatam.equlatam_backv2.cliente.dto.response.ClienteResponse;
 import com.equalatam.equlatam_backv2.cliente.entity.Cliente;
 import com.equalatam.equlatam_backv2.cliente.repositories.ClienteRepository;
 import com.equalatam.equlatam_backv2.entity.User;
