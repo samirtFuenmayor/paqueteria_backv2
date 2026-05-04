@@ -64,6 +64,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/tracking/public/**").permitAll()
                         .requestMatchers("/api/clientes/me").authenticated()
+                        .requestMatchers("/api/pedidos/sucursal/**")
+                        .hasAnyRole("ADMIN", "AGENTE")
                         .requestMatchers(HttpMethod.POST,  "/api/pedidos").hasAnyRole("CLIENTE","ADMIN")
                         .requestMatchers(HttpMethod.GET,   "/api/pedidos/cliente/**").hasAnyRole("CLIENTE","ADMIN")
                         .requestMatchers(HttpMethod.POST,  "/api/financiero/cotizaciones/*/aprobar-cliente").hasAnyRole("CLIENTE","ADMIN")

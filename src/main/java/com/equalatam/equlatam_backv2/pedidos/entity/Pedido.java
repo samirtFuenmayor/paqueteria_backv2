@@ -6,6 +6,8 @@ import com.equalatam.equlatam_backv2.entity.User;
 import com.equalatam.equlatam_backv2.sucursales.entity.Sucursal;
 import jakarta.persistence.*;
 import lombok.*;
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.AttributeOverrides;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -117,4 +119,52 @@ public class Pedido {
     // ─── Tarifa aplicada ──────────────────────────────────────────────────────────
     private String tipoTarifa = "INDIVIDUAL"; // INDIVIDUAL, FAMILIAR, AMIGO
 
+    // ─── Pago ─────────────────────────────────────────────────────────────────────
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private FormaPago formaPago;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EstadoPago estadoPago = EstadoPago.PENDIENTE_COMPROBANTE;
+
+    // Datos bancarios (solo para TRANSFERENCIA)
+    private String bancoOrigen;
+    private String numeroReferencia;
+
+    // Comprobante en base64 (transferencia o foto del recibo efectivo)
+    @Column(columnDefinition = "TEXT")
+    private String comprobanteBase64;
+
+    private LocalDateTime fechaSubidaComprobante;
+    private LocalDateTime fechaVerificacionPago;
+
+    // Quien verificó el pago
+    @ManyToOne
+    @JoinColumn(name = "verificado_por_id")
+    private com.equalatam.equlatam_backv2.entity.User verificadoPor;
+
+    private String motivoRechazo;
+
+    // ─── Facturación ──────────────────────────────────────────────────────────────
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "razonSocial",          column = @Column(name = "fact_razon_social")),
+            @AttributeOverride(name = "rucCedula",            column = @Column(name = "fact_ruc_cedula")),
+            @AttributeOverride(name = "direccionFacturacion", column = @Column(name = "fact_direccion")),
+            @AttributeOverride(name = "emailFacturacion",     column = @Column(name = "fact_email")),
+            @AttributeOverride(name = "telefonoFacturacion",  column = @Column(name = "fact_telefono")),
+            @AttributeOverride(name = "usarDatosCliente",     column = @Column(name = "fact_usar_datos_cliente"))
+    })
+    private DatosFacturacion datosFacturacion;
+
+    // ─── Sucursal donde se atendió presencialmente ────────────────────────────────
+// Solo aplica cuando el pedido fue registrado por un agente/admin en sucursal
+    @ManyToOne
+    @JoinColumn(name = "sucursal_atencion_id")
+    private Sucursal sucursalAtencion;
+
+    // true = pedido registrado presencialmente por agente/admin
+    @Column(nullable = false)
+    private boolean registradoEnSucursal = false;
 }

@@ -44,4 +44,8 @@ public class PedidoItem {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime creadoEn = LocalDateTime.now();
+
+    // Subcategoría del producto (validada contra tipoProducto)
+    @Enumerated(EnumType.STRING)
+    private SubcategoriaProducto subcategoria;
 }

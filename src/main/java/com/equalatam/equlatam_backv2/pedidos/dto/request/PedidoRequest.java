@@ -2,7 +2,9 @@ package com.equalatam.equlatam_backv2.pedidos.dto.request;
 
 
 import com.equalatam.equlatam_backv2.pedidos.entity.CategoriaPedido;
+import com.equalatam.equlatam_backv2.pedidos.entity.FormaPago;
 import com.equalatam.equlatam_backv2.pedidos.entity.TipoPedido;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -58,6 +60,14 @@ public record PedidoRequest(
         CategoriaPedido categoriaPedido,
         Boolean esPorTitular,
         UUID titularId,
-        java.util.List<PedidoItemRequest> items
+        java.util.List<PedidoItemRequest> items,
+
+        // ─── Pago ─────────────────────────────────────────────────────────────────────
+        @NotNull FormaPago formaPago,
+        String bancoOrigen,           // Solo si TRANSFERENCIA
+        String numeroReferencia,      // Solo si TRANSFERENCIA
+
+// ─── Facturación ──────────────────────────────────────────────────────────────
+        @NotNull @Valid DatosFacturacionRequest datosFacturacion
 
 ) {}

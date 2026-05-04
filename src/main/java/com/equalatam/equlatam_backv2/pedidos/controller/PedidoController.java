@@ -1,9 +1,13 @@
 package com.equalatam.equlatam_backv2.pedidos.controller;
 
+import com.equalatam.equlatam_backv2.pedidos.dto.request.ComprobanteRequest;
 import com.equalatam.equlatam_backv2.pedidos.dto.request.PedidoRequest;
 import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResponse;
 import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResumenResponse;
 import com.equalatam.equlatam_backv2.pedidos.entity.EstadoPedido;
+import com.equalatam.equlatam_backv2.pedidos.entity.Pedido;
+import com.equalatam.equlatam_backv2.pedidos.entity.SubcategoriaProducto;
+import com.equalatam.equlatam_backv2.pedidos.entity.TipoProducto;
 import com.equalatam.equlatam_backv2.pedidos.service.PedidoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,9 +17,11 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/pedidos")
@@ -158,5 +164,55 @@ public class PedidoController {
 
         boolean despacharParcial = Boolean.parseBoolean(body.get("despacharParcial"));
         return ResponseEntity.ok(pedidoService.decisionDespacho(pedidoId, despacharParcial));
+    }
+
+    // ─── Devuelve subcategorías disponibles para un TipoProducto ──────────────
+    @GetMapping("/subcategorias/{tipoProducto}")
+    public ResponseEntity<List<String>> subcategoriasPorTipo(
+            @PathVariable TipoProducto tipoProducto) {
+        List<String> subs = Arrays.stream(SubcategoriaProducto.values())
+                .filter(s -> s.perteneceA(tipoProducto))
+                .map(Enum::name)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(subs);
+    }
+
+    // ─── Paso 2: cliente/agente sube comprobante ──────────────────────────────────
+    @PatchMapping("/{id}/comprobante")
+    public ResponseEntity<PedidoResponse> subirComprobante(
+            @PathVariable UUID id,
+            @Valid @RequestBody ComprobanteRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        String username = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(pedidoService.subirComprobante(id, req, username));
+    }
+
+    // ─── Paso 3: admin verifica el pago ──────────────────────────────────────────
+    @PatchMapping("/{id}/verificar-pago")
+    public ResponseEntity<PedidoResponse> verificarPago(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        boolean aprobado = Boolean.parseBoolean(body.get("aprobado"));
+        String motivo = body.get("motivoRechazo");
+        String username = userDetails != null ? userDetails.getUsername() : null;
+
+        return ResponseEntity.ok(
+                pedidoService.verificarPago(id, aprobado, motivo, username));
+    }
+
+    // ─── Admin obtiene el comprobante para verificar ──────────────────────────────
+    @GetMapping("/{id}/comprobante")
+    public ResponseEntity<Map<String, String>> obtenerComprobante(
+            @PathVariable UUID id) {
+        Pedido pedido = pedidoService.getPedidoOrThrow(id);
+
+        if (pedido.getComprobanteBase64() == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(Map.of(
+                "comprobanteBase64", pedido.getComprobanteBase64()));
     }
 }

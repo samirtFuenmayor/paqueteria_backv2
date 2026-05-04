@@ -1,10 +1,7 @@
 package com.equalatam.equlatam_backv2.pedidos.dto.response;
 
 
-import com.equalatam.equlatam_backv2.pedidos.entity.CategoriaPedido;
-import com.equalatam.equlatam_backv2.pedidos.entity.EstadoPedido;
-import com.equalatam.equlatam_backv2.pedidos.entity.Pedido;
-import com.equalatam.equlatam_backv2.pedidos.entity.TipoPedido;
+import com.equalatam.equlatam_backv2.pedidos.entity.*;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -63,9 +60,31 @@ public record PedidoResponse(
         Boolean esPorTitular,
         java.util.List<PedidoItemResponse> items,
         Double pesoTotal,
-        String tipoTarifa
+        String tipoTarifa,
+
+        FormaPago formaPago,
+        EstadoPago estadoPago,
+        String bancoOrigen,
+        String numeroReferencia,
+        boolean tieneComprobante,   // true/false sin exponer el base64 en listados
+        LocalDateTime fechaSubidaComprobante,
+        LocalDateTime fechaVerificacionPago,
+        String motivoRechazo,
+
+        // Facturación
+        String factRazonSocial,
+        String factRucCedula,
+        String factEmail,
+        String factDireccion,
+        boolean factUsarDatosCliente,
+
+        // ─── Datos del registro presencial ───────────────────────────────────────────
+        boolean registradoEnSucursal,
+        String sucursalAtencionNombre,   // nombre de la sucursal donde se atendió
+        String registradoPorNombre   // nombre completo del agente/admin
 ) {
     public static PedidoResponse from(Pedido p) {
+        var fact = p.getDatosFacturacion();
         return new PedidoResponse(
                 p.getId(),
                 p.getNumeroPedido(),
@@ -115,8 +134,33 @@ public record PedidoResponse(
                 p.getItems() != null ? p.getItems().stream().map(PedidoItemResponse::from).collect(java.util.stream.Collectors.toList())
                         : java.util.List.of(),
                 p.getPesoTotal(),
-                p.getTipoTarifa()
+                p.getTipoTarifa(),
 
+                p.getFormaPago(),
+                p.getEstadoPago(),
+                p.getBancoOrigen(),
+                p.getNumeroReferencia(),
+                p.getComprobanteBase64() != null,
+                p.getFechaSubidaComprobante(),
+                p.getFechaVerificacionPago(),
+                p.getMotivoRechazo(),
+
+                fact != null ? fact.getRazonSocial() : null,
+                fact != null ? fact.getRucCedula() : null,
+                fact != null ? fact.getEmailFacturacion() : null,
+                fact != null ? fact.getDireccionFacturacion() : null,
+                fact != null && fact.getUsarDatosCliente() != null
+                        ? fact.getUsarDatosCliente()
+                        : false,
+                p.isRegistradoEnSucursal(),
+
+                p.getSucursalAtencion() != null
+                        ? p.getSucursalAtencion().getNombre()
+                        : null,
+
+                p.getRegistradoPor() != null
+                        ? p.getRegistradoPor().getNombre() + " " + p.getRegistradoPor().getApellido()
+                        : null
         );
     }
 

@@ -68,4 +68,6 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
 
     // Pedidos en un rango de fechas
     List<Pedido> findByFechaRegistroBetween(LocalDateTime desde, LocalDateTime hasta);
+
+    List<Pedido> findBySucursalAtencionId(UUID sucursalAtencionId);
 }
