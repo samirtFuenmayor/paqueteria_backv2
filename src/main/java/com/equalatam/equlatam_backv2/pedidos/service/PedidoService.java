@@ -9,14 +9,13 @@ import com.equalatam.equlatam_backv2.financiero.enums.EstadoCotizacion;
 import com.equalatam.equlatam_backv2.financiero.repository.CotizacionRepository;
 import com.equalatam.equlatam_backv2.financiero.repository.FacturaRepository;
 import com.equalatam.equlatam_backv2.financiero.service.CotizacionService;
+import com.equalatam.equlatam_backv2.pedidos.dto.request.ComprobanteRequest;
+import com.equalatam.equlatam_backv2.pedidos.dto.request.DatosFacturacionRequest;
 import com.equalatam.equlatam_backv2.pedidos.dto.request.PedidoItemRequest;
 import com.equalatam.equlatam_backv2.pedidos.dto.request.PedidoRequest;
 import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResponse;
 import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResumenResponse;
-import com.equalatam.equlatam_backv2.pedidos.entity.EstadoPedido;
-import com.equalatam.equlatam_backv2.pedidos.entity.Pedido;
-import com.equalatam.equlatam_backv2.pedidos.entity.PedidoItem;
-import com.equalatam.equlatam_backv2.pedidos.entity.TipoPedido;
+import com.equalatam.equlatam_backv2.pedidos.entity.*;
 import com.equalatam.equlatam_backv2.pedidos.repository.PedidoItemRepository;
 import com.equalatam.equlatam_backv2.pedidos.repository.PedidoRepository;
 import com.equalatam.equlatam_backv2.repository.UserRepository;
@@ -107,6 +106,17 @@ public class PedidoService {
                 PedidoItem item = new PedidoItem();
                 item.setPedido(pedido);
                 item.setTipoProducto(itemReq.tipoProducto());
+                // ─── Validar subcategoría ─────────────────────────────────────────────
+                if (itemReq.subcategoria() != null) {
+                    if (!itemReq.subcategoria().perteneceA(itemReq.tipoProducto())) {
+                        throw new IllegalArgumentException(
+                                "La subcategoría " + itemReq.subcategoria() +
+                                        " no corresponde al tipo " + itemReq.tipoProducto());
+                    }
+                    item.setSubcategoria(itemReq.subcategoria());
+                }
+                // ─────────────────────────────────────────────────────────────────────
+
                 item.setDescripcion(itemReq.descripcion());
                 item.setTrackingExterno(itemReq.trackingExterno());
                 item.setProveedor(itemReq.proveedor());
@@ -166,6 +176,34 @@ public class PedidoService {
                 case TITULAR -> "INDIVIDUAL";
             };
             pedido.setTipoTarifa(tipoTarifa);
+
+            // ─── Pago ─────────────────────────────────────────────────────────────────────
+            pedido.setFormaPago(req.formaPago());
+            pedido.setEstadoPago(EstadoPago.PENDIENTE_COMPROBANTE);
+            if (req.bancoOrigen() != null)      pedido.setBancoOrigen(req.bancoOrigen());
+            if (req.numeroReferencia() != null) pedido.setNumeroReferencia(req.numeroReferencia());
+
+// ─── Facturación ──────────────────────────────────────────────────────────────
+            DatosFacturacion fact = new DatosFacturacion();
+            DatosFacturacionRequest factReq = req.datosFacturacion();
+            fact.setUsarDatosCliente(Boolean.TRUE.equals(factReq.usarDatosCliente()));
+
+            if (Boolean.TRUE.equals(factReq.usarDatosCliente())) {
+                // Copiar datos del cliente automáticamente
+                fact.setRazonSocial(cliente.getNombres() + " " + cliente.getApellidos());
+                fact.setRucCedula(cliente.getNumeroIdentificacion());
+                fact.setEmailFacturacion(cliente.getEmail());
+                fact.setTelefonoFacturacion(cliente.getTelefono());
+                fact.setDireccionFacturacion(cliente.getDireccion());
+            } else {
+                // Datos de tercero ingresados manualmente
+                fact.setRazonSocial(factReq.razonSocial());
+                fact.setRucCedula(factReq.rucCedula());
+                fact.setEmailFacturacion(factReq.emailFacturacion());
+                fact.setTelefonoFacturacion(factReq.telefonoFacturacion());
+                fact.setDireccionFacturacion(factReq.direccionFacturacion());
+            }
+            pedido.setDatosFacturacion(fact);
         }
 
         // ── Registrar primer evento de tracking automáticamente ───────────────
@@ -358,7 +396,7 @@ public class PedidoService {
         return numero;
     }
 
-    private Pedido getPedidoOrThrow(UUID id) {
+    public Pedido getPedidoOrThrow(UUID id) {
         return pedidoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Pedido no encontrado: " + id));
@@ -518,6 +556,62 @@ public class PedidoService {
                     "Cliente decidió esperar los items faltantes en casillero.",
                     null, null, null, true, null);
         }
+
+        return PedidoResponse.from(pedidoRepository.save(pedido));
+    }
+
+    // ─── Paso 2: subir comprobante ────────────────────────────────────────────────
+    @Transactional
+    public PedidoResponse subirComprobante(UUID pedidoId,
+                                           ComprobanteRequest req,
+                                           String username) {
+        Pedido pedido = getPedidoOrThrow(pedidoId);
+
+        if (pedido.getEstadoPago() == EstadoPago.PAGO_VERIFICADO) {
+            throw new IllegalArgumentException("El pago ya fue verificado");
+        }
+
+        pedido.setComprobanteBase64(req.comprobanteBase64());
+        pedido.setEstadoPago(EstadoPago.COMPROBANTE_ENVIADO);
+        pedido.setFechaSubidaComprobante(LocalDateTime.now());
+
+        if (req.bancoOrigen() != null)      pedido.setBancoOrigen(req.bancoOrigen());
+        if (req.numeroReferencia() != null) pedido.setNumeroReferencia(req.numeroReferencia());
+
+        trackingService.registrarEvento(pedido, pedido.getEstado(),
+                "Comprobante de pago enviado, pendiente verificación",
+                username, null, null, true, null);
+
+        return PedidoResponse.from(pedidoRepository.save(pedido));
+    }
+
+    // ─── Paso 3: admin verifica o rechaza ────────────────────────────────────────
+    @Transactional
+    public PedidoResponse verificarPago(UUID pedidoId, boolean aprobado,
+                                        String motivoRechazo, String username) {
+        Pedido pedido = getPedidoOrThrow(pedidoId);
+
+        if (pedido.getEstadoPago() != EstadoPago.COMPROBANTE_ENVIADO) {
+            throw new IllegalArgumentException(
+                    "El pedido no tiene comprobante pendiente de verificación");
+        }
+
+        pedido.setFechaVerificacionPago(LocalDateTime.now());
+
+        if (aprobado) {
+            pedido.setEstadoPago(EstadoPago.PAGO_VERIFICADO);
+            trackingService.registrarEvento(pedido, pedido.getEstado(),
+                    "Pago verificado y aprobado", username, null, null, true, null);
+        } else {
+            pedido.setEstadoPago(EstadoPago.PAGO_RECHAZADO);
+            pedido.setMotivoRechazo(motivoRechazo);
+            trackingService.registrarEvento(pedido, pedido.getEstado(),
+                    "Comprobante rechazado: " + motivoRechazo,
+                    username, null, null, true, null);
+        }
+
+        userRepository.findByUsername(username)
+                .ifPresent(pedido::setVerificadoPor);
 
         return PedidoResponse.from(pedidoRepository.save(pedido));
     }

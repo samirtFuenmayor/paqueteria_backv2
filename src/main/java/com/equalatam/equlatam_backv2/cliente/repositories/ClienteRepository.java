@@ -41,4 +41,6 @@ public interface ClienteRepository extends JpaRepository<Cliente, UUID> {
     Optional<Cliente> findAfiliadoByTitular(
             @Param("titularId") UUID titularId,
             @Param("afiliadoId") UUID afiliadoId);
+
+
 }

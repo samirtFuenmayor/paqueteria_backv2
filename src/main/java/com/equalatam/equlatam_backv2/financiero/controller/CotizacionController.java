@@ -5,9 +5,11 @@ import com.equalatam.equlatam_backv2.financiero.dto.AprobarCotizacionRequest;
 import com.equalatam.equlatam_backv2.financiero.dto.CotizacionRequest;
 import com.equalatam.equlatam_backv2.financiero.dto.CotizacionResponse;
 import com.equalatam.equlatam_backv2.financiero.service.CotizacionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -60,10 +62,22 @@ public class CotizacionController {
         return ResponseEntity.ok(service.toResponse(service.cancelar(id)));
     }
 
+    // ─── Cliente aprueba y elige forma de pago ────────────────────────────────────
     @PostMapping("/{id}/aprobar-cliente")
     public ResponseEntity<CotizacionResponse> aprobarPorCliente(
             @PathVariable UUID id,
-            @RequestBody AprobarCotizacionRequest req) {
-        return ResponseEntity.ok(service.toResponse(service.aprobarPorCliente(id, req)));
+            @Valid @RequestBody AprobarCotizacionRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        String username = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(
+                service.toResponse(service.aprobarPorCliente(id, req, username)));
+    }
+
+    // ─── Cliente cancela → elimina pedido + cotización ────────────────────────────
+    @DeleteMapping("/{id}/cancelar-cliente")
+    public ResponseEntity<Void> cancelarPorCliente(@PathVariable UUID id) {
+        service.cancelarPorCliente(id);
+        return ResponseEntity.noContent().build();
     }
 }

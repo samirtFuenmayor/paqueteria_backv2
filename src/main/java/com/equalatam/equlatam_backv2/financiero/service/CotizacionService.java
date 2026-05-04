@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,6 +31,8 @@ public class CotizacionService {
     private final TarifaRepository     tarifaRepo;
     private final TarifaService        tarifaService;
     private final NumeroSecuencialService secuencialService;
+    private final com.equalatam.equlatam_backv2.pedidos.repository.PedidoItemRepository pedidoItemRepo;
+    private final com.equalatam.equlatam_backv2.repository.UserRepository userRepo;
 
 
     // ─── Crear cotización ─────────────────────────────────────────────────────
@@ -168,7 +171,9 @@ public class CotizacionService {
     }
 
     @Transactional
-    public Cotizacion aprobarPorCliente(UUID id, AprobarCotizacionRequest req) {
+    public Cotizacion aprobarPorCliente(UUID id,
+                                        AprobarCotizacionRequest req,
+                                        String username) {
         Cotizacion c = obtener(id);
 
         if (c.getEstado() != EstadoCotizacion.PENDIENTE) {
@@ -180,20 +185,71 @@ public class CotizacionService {
             throw new RuntimeException("La cotización ha vencido");
         }
 
-        // Aprobar
+        // ─── Aprobar cotización ───────────────────────────────────────────────────
         c.setEstado(EstadoCotizacion.APROBADA);
 
-        // Guardar la forma de pago elegida por el cliente en las observaciones
-        // hasta que el admin cree el Pago formal
-        String infoPago = String.format("[PAGO CLIENTE] Forma: %s | Ref: %s | %s",
-                req.formaPago(),
-                req.referenciaPago() != null ? req.referenciaPago() : "N/A",
-                req.observaciones() != null ? req.observaciones() : "");
-        c.setObservaciones(infoPago);
+        // ─── Propagar datos de pago y facturación al pedido ───────────────────────
+        if (c.getPedido() != null) {
+            var pedido = c.getPedido();
+
+            pedido.setFormaPago(req.formaPago());
+            pedido.setEstadoPago(
+                    com.equalatam.equlatam_backv2.pedidos.entity.EstadoPago.PENDIENTE_COMPROBANTE);
+
+            if (req.bancoOrigen() != null)    pedido.setBancoOrigen(req.bancoOrigen());
+            if (req.referenciaPago() != null) pedido.setNumeroReferencia(req.referenciaPago());
+
+            // Datos de facturación
+            var fact = new com.equalatam.equlatam_backv2.pedidos.entity.DatosFacturacion();
+            var factReq = req.datosFacturacion();
+            fact.setUsarDatosCliente(Boolean.TRUE.equals(factReq.usarDatosCliente()));
+
+            if (Boolean.TRUE.equals(factReq.usarDatosCliente())) {
+                var cliente = c.getCliente();
+                fact.setRazonSocial(cliente.getNombres() + " " + cliente.getApellidos());
+                fact.setRucCedula(cliente.getNumeroIdentificacion());
+                fact.setEmailFacturacion(cliente.getEmail());
+                fact.setTelefonoFacturacion(cliente.getTelefono());
+                fact.setDireccionFacturacion(cliente.getDireccion());
+            } else {
+                fact.setRazonSocial(factReq.razonSocial());
+                fact.setRucCedula(factReq.rucCedula());
+                fact.setEmailFacturacion(factReq.emailFacturacion());
+                fact.setTelefonoFacturacion(factReq.telefonoFacturacion());
+                fact.setDireccionFacturacion(factReq.direccionFacturacion());
+            }
+            pedido.setDatosFacturacion(fact);
+            pedidoRepo.save(pedido);
+        }
+
+        if (req.observaciones() != null) c.setObservaciones(req.observaciones());
 
         return repo.save(c);
     }
 
+    @Transactional
+    public void cancelarPorCliente(UUID cotizacionId) {
+        Cotizacion c = obtener(cotizacionId);
+
+        if (c.getEstado() != EstadoCotizacion.PENDIENTE) {
+            throw new RuntimeException(
+                    "Solo se puede cancelar una cotización en estado PENDIENTE");
+        }
+
+        // ─── Eliminar pedido asociado si existe ───────────────────────────────────
+        if (c.getPedido() != null) {
+            var pedido = c.getPedido();
+
+            // Eliminar items primero (FK)
+            pedidoItemRepo.deleteByPedidoId(pedido.getId());
+
+            pedidoRepo.delete(pedido);
+        }
+
+        // ─── Cancelar cotización ──────────────────────────────────────────────────
+        c.setEstado(EstadoCotizacion.CANCELADA);
+        repo.save(c);
+    }
 
     public CotizacionResponse toResponse(Cotizacion c) {
         CotizacionResponse r = new CotizacionResponse();
