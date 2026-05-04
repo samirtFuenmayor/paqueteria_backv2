@@ -1,6 +1,6 @@
 package com.equalatam.equlatam_backv2.pedidos.controller;
 
-import com.equalatam.equlatam_backv2.cliente.dto.ClienteResponse;
+import com.equalatam.equlatam_backv2.cliente.dto.response.ClienteResponse;
 import com.equalatam.equlatam_backv2.pedidos.dto.request.PedidoRequest;
 import com.equalatam.equlatam_backv2.pedidos.dto.response.PedidoResponse;
 import com.equalatam.equlatam_backv2.pedidos.service.PedidoSucursalService;
