@@ -63,11 +63,11 @@ public record PedidoRequest(
         java.util.List<PedidoItemRequest> items,
 
         // ─── Pago ─────────────────────────────────────────────────────────────────────
-        @NotNull FormaPago formaPago,
+        FormaPago formaPago,
         String bancoOrigen,           // Solo si TRANSFERENCIA
         String numeroReferencia,      // Solo si TRANSFERENCIA
 
 // ─── Facturación ──────────────────────────────────────────────────────────────
-        @NotNull @Valid DatosFacturacionRequest datosFacturacion
+        @Valid DatosFacturacionRequest datosFacturacion
 
 ) {}

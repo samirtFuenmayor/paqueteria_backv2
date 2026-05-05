@@ -47,6 +47,8 @@ public class PedidoService {
     private final CotizacionRepository cotizacionRepository;
     private final FacturaRepository facturaRepository;
     private final PedidoItemRepository pedidoItemRepository;
+    private final com.equalatam.equlatam_backv2.financiero.service.FacturaService facturaService;
+    private final com.equalatam.equlatam_backv2.financiero.dto.FacturaRequest facturaRequestProto = null;
 
 
     // ─── Crear pedido ─────────────────────────────────────────────────────────
@@ -168,7 +170,6 @@ public class PedidoService {
                         "El cliente no está afiliado al titular indicado");
             }
 
-            // Determinar tipo de tarifa según parentesco
             Parentesco parentesco = afiliado.getParentesco();
             String tipoTarifa = switch (parentesco) {
                 case CONYUGE, HIJO, HIJA, PADRE, MADRE, HERMANO, HERMANA -> "FAMILIAR";
@@ -176,27 +177,30 @@ public class PedidoService {
                 case TITULAR -> "INDIVIDUAL";
             };
             pedido.setTipoTarifa(tipoTarifa);
+        }
 
-            // ─── Pago ─────────────────────────────────────────────────────────────────────
+        // ─── Pago ─────────────────────────────────────────────────────────────────────
+        if (req.formaPago() != null) {
             pedido.setFormaPago(req.formaPago());
-            pedido.setEstadoPago(EstadoPago.PENDIENTE_COMPROBANTE);
-            if (req.bancoOrigen() != null)      pedido.setBancoOrigen(req.bancoOrigen());
-            if (req.numeroReferencia() != null) pedido.setNumeroReferencia(req.numeroReferencia());
+        }
+        pedido.setEstadoPago(EstadoPago.PENDIENTE_COMPROBANTE);
+        if (req.bancoOrigen() != null)      pedido.setBancoOrigen(req.bancoOrigen());
+        if (req.numeroReferencia() != null) pedido.setNumeroReferencia(req.numeroReferencia());
 
-// ─── Facturación ──────────────────────────────────────────────────────────────
+        // ─── Facturación ──────────────────────────────────────────────────────────────
+        // ← FUERA del if esPorTitular
+        if (req.datosFacturacion() != null) {
             DatosFacturacion fact = new DatosFacturacion();
             DatosFacturacionRequest factReq = req.datosFacturacion();
             fact.setUsarDatosCliente(Boolean.TRUE.equals(factReq.usarDatosCliente()));
 
             if (Boolean.TRUE.equals(factReq.usarDatosCliente())) {
-                // Copiar datos del cliente automáticamente
                 fact.setRazonSocial(cliente.getNombres() + " " + cliente.getApellidos());
                 fact.setRucCedula(cliente.getNumeroIdentificacion());
                 fact.setEmailFacturacion(cliente.getEmail());
                 fact.setTelefonoFacturacion(cliente.getTelefono());
                 fact.setDireccionFacturacion(cliente.getDireccion());
             } else {
-                // Datos de tercero ingresados manualmente
                 fact.setRazonSocial(factReq.razonSocial());
                 fact.setRucCedula(factReq.rucCedula());
                 fact.setEmailFacturacion(factReq.emailFacturacion());
@@ -206,7 +210,30 @@ public class PedidoService {
             pedido.setDatosFacturacion(fact);
         }
 
-        // ── Registrar primer evento de tracking automáticamente ───────────────
+        // ─── Auto-generar cotización si el cliente la solicitó ───────────────────
+        if (Boolean.TRUE.equals(req.solicitaCotizacion())) {
+            if (req.peso() == null && (pedido.getPesoTotal() == null || pedido.getPesoTotal() == 0)) {
+                throw new IllegalArgumentException(
+                        "Para solicitar cotización se requiere peso del paquete");
+            }
+            if (req.categoria() == null) {
+                throw new IllegalArgumentException(
+                        "Para solicitar cotización se requiere la categoría del paquete");
+            }
+            CotizacionRequest cotReq = new CotizacionRequest();
+            cotReq.setClienteId(req.clienteId());
+            cotReq.setPedidoId(guardado.getId());
+            // Usar pesoTotal de items si no viene peso directo
+            cotReq.setPesoReal(req.peso() != null ? req.peso() : pedido.getPesoTotal());
+            cotReq.setLargo(req.largo());
+            cotReq.setAncho(req.ancho());
+            cotReq.setAlto(req.alto());
+            cotReq.setValorDeclarado(req.valorDeclarado());
+            cotReq.setCategoria(req.categoria());
+
+            cotizacionService.crear(cotReq, null);
+        }
+        // ── Registrar primer evento de tracking ───────────────────────────────
         trackingService.registrarEvento(
                 guardado, EstadoPedido.REGISTRADO,
                 "Pedido registrado en el sistema",
@@ -215,9 +242,6 @@ public class PedidoService {
         );
 
         return PedidoResponse.from(guardado);
-
-        //notificacionService.notificarPedidoRegistrado(guardado);
-      //  notificacionService.notificarCambioEstado(guardado, nuevoEstado, observacion);
     }
 
     // ─── Listar todos ─────────────────────────────────────────────────────────
@@ -364,6 +388,82 @@ public class PedidoService {
         return PedidoResponse.from(guardado);
     }
 
+    // ─── Admin confirma pago y emite factura ─────────────────────────────────────
+    @Transactional
+    public PedidoResponse confirmarPagoYFacturar(UUID pedidoId, String username) {
+        Pedido pedido = getPedidoOrThrow(pedidoId);
+
+        if (pedido.getEstadoPago() != EstadoPago.PAGO_VERIFICADO) {
+            throw new IllegalArgumentException(
+                    "El pago debe estar verificado antes de facturar");
+        }
+
+        List<PedidoItem> items = pedidoItemRepository.findByPedidoId(pedidoId);
+
+        // Si no tiene items registrados, ir directo a facturar
+        if (!items.isEmpty()) {
+            long llegaron  = items.stream()
+                    .filter(i -> Boolean.TRUE.equals(i.getLlego())).count();
+            long faltantes = items.stream()
+                    .filter(i -> !Boolean.TRUE.equals(i.getLlego())).count();
+
+            if (faltantes > 0) {
+                // Hay items faltantes — notificar al cliente para que decida
+                pedido.setEstado(EstadoPedido.RECEPCION_PARCIAL);
+                pedidoRepository.save(pedido);
+
+                trackingService.registrarEvento(pedido, EstadoPedido.RECEPCION_PARCIAL,
+                        "Recepción parcial: llegaron " + llegaron + " de " + items.size()
+                                + ". Cliente debe decidir si espera o despacha.",
+                        username, null, null, true, null);
+
+                // TODO: notificacionService.notificarRecepcionParcial(pedido, llegaron, faltantes);
+
+                return PedidoResponse.from(pedido);
+            }
+        }
+
+        // Todos llegaron (o no hay items) — emitir factura
+        com.equalatam.equlatam_backv2.entity.User operador =
+                userRepository.findByUsername(username).orElse(null);
+
+        // Buscar cotización aprobada
+        var cotizaciones = cotizacionRepository.findByPedidoId(pedidoId);
+        var cot = cotizaciones.stream()
+                .filter(c -> c.getEstado() == EstadoCotizacion.APROBADA
+                        || c.getEstado() == EstadoCotizacion.PENDIENTE)
+                .findFirst().orElse(null);
+
+        com.equalatam.equlatam_backv2.financiero.dto.FacturaRequest factReq =
+                new com.equalatam.equlatam_backv2.financiero.dto.FacturaRequest();
+        factReq.setClienteId(pedido.getCliente().getId());
+        factReq.setPedidoId(pedido.getId());
+
+        if (cot != null) {
+            factReq.setCotizacionId(cot.getId());
+        }
+
+        if (pedido.getFormaPago() != null) {
+            factReq.setFormaPago(pedido.getFormaPago().name());
+        }
+
+        // Crear y emitir factura
+        var factura = facturaService.crear(factReq, operador);
+        facturaService.emitir(factura.getId(), operador);
+
+        // Actualizar estado del pedido
+        pedido.setEstado(EstadoPedido.RECIBIDO_EN_SEDE);
+        pedido.setFechaRecepcionSede(LocalDateTime.now());
+        Pedido guardado = pedidoRepository.save(pedido);
+
+        trackingService.registrarEvento(guardado, EstadoPedido.RECIBIDO_EN_SEDE,
+                "Pago verificado. Factura " + factura.getNumeroFactura() + " emitida.",
+                username, null, null, true, null);
+
+        // TODO: notificacionService.notificarFacturaEmitida(pedido, factura);
+
+        return PedidoResponse.from(guardado);
+    }
     // ─── Helpers ──────────────────────────────────────────────────────────────
     private String obtenerDescripcionEstado(EstadoPedido estado) {
         return switch (estado) {

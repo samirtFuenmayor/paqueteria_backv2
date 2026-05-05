@@ -215,4 +215,15 @@ public class PedidoController {
         return ResponseEntity.ok(Map.of(
                 "comprobanteBase64", pedido.getComprobanteBase64()));
     }
+
+    // ─── Admin verifica llegada + emite factura ───────────────────────────────────
+    @PostMapping("/{pedidoId}/confirmar-pago-y-facturar")
+    public ResponseEntity<PedidoResponse> confirmarPagoYFacturar(
+            @PathVariable UUID pedidoId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        String username = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(
+                pedidoService.confirmarPagoYFacturar(pedidoId, username));
+    }
 }
