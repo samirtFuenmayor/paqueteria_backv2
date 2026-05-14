@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 public record DatosFacturacionRequest(
         Boolean usarDatosCliente,   // true = copiar del cliente automáticamente
         String razonSocial,
-        @NotBlank String rucCedula,
+        String rucCedula,
         String direccionFacturacion,
         String emailFacturacion,
         String telefonoFacturacion
