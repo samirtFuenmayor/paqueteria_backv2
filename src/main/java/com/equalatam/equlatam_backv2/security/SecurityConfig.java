@@ -61,31 +61,55 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // ─── Público ──────────────────────────────────────────────────────
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/tracking/public/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/sucursales/**").permitAll()
+
+                        // ─── Cliente — pedidos ────────────────────────────────────────────
+                        .requestMatchers(HttpMethod.POST,   "/api/pedidos").hasAnyRole("CLIENTE","ADMIN","AGENTE")
+                        .requestMatchers(HttpMethod.GET,    "/api/pedidos/cliente/**").hasAnyRole("CLIENTE","ADMIN")
+                        .requestMatchers(HttpMethod.PATCH,  "/api/pedidos/*/comprobante").hasAnyRole("CLIENTE","ADMIN","AGENTE")
+                        .requestMatchers(HttpMethod.POST,   "/api/pedidos/*/decision-despacho").hasAnyRole("CLIENTE","ADMIN")
+                        .requestMatchers(HttpMethod.GET,    "/api/pedidos/subcategorias/**").hasAnyRole("CLIENTE","ADMIN","AGENTE")
+
+                        // ─── Cliente — cotizaciones ───────────────────────────────────────
+                        .requestMatchers(HttpMethod.POST,   "/api/financiero/cotizaciones/*/aprobar-cliente").hasAnyRole("CLIENTE","ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/financiero/cotizaciones/*/cancelar-cliente").hasAnyRole("CLIENTE","ADMIN")
+                        .requestMatchers(HttpMethod.GET,    "/api/financiero/cotizaciones/cliente/**").hasAnyRole("CLIENTE","ADMIN")
+                        .requestMatchers(HttpMethod.GET,    "/api/financiero/cotizaciones/pedido/**").hasAnyRole("CLIENTE","ADMIN")
+
+                        // ─── Cliente — facturas ───────────────────────────────────────────
+                        .requestMatchers(HttpMethod.GET,    "/api/financiero/facturas/cliente/**").hasAnyRole("CLIENTE","ADMIN")
+
+                        // ─── Cliente — tracking ───────────────────────────────────────────
+                        .requestMatchers(HttpMethod.GET,    "/api/tracking/**").hasAnyRole("CLIENTE","ADMIN","SUPERVISOR","CAJERO","AGENTE")
+
+                        // ─── Cliente — perfil ─────────────────────────────────────────────
                         .requestMatchers("/api/clientes/me").authenticated()
-                        .requestMatchers("/api/pedidos/sucursal/**")
-                        .hasAnyRole("ADMIN", "AGENTE")
-                        .requestMatchers(HttpMethod.POST,  "/api/pedidos").hasAnyRole("CLIENTE","ADMIN")
-                        .requestMatchers(HttpMethod.GET,   "/api/pedidos/cliente/**").hasAnyRole("CLIENTE","ADMIN")
-                        .requestMatchers(HttpMethod.POST,  "/api/financiero/cotizaciones/*/aprobar-cliente").hasAnyRole("CLIENTE","ADMIN")
-                        .requestMatchers(HttpMethod.GET,   "/api/financiero/cotizaciones/*/cliente/**").hasAnyRole("CLIENTE","ADMIN")
-                        .requestMatchers(HttpMethod.GET,   "/api/financiero/facturas/cliente/**").hasAnyRole("CLIENTE","ADMIN")
-                        .requestMatchers(HttpMethod.GET,   "/api/tracking/**").hasAnyRole("CLIENTE","ADMIN","SUPERVISOR","CAJERO")
-                        .requestMatchers(HttpMethod.GET, "/api/financiero/cotizaciones/cliente/**").hasAnyRole("CLIENTE","ADMIN")
+
+                        // ─── Agente en sucursal ───────────────────────────────────────────
+                        .requestMatchers("/api/pedidos/sucursal/**").hasAnyRole("ADMIN","AGENTE")
+
+                        // ─── Financiero (admin/cajero) ────────────────────────────────────
                         .requestMatchers("/api/financiero/**").hasAnyRole("CAJERO","ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/pedidos/admin/**").hasAnyRole("CAJERO","ADMIN")
+
+                        // ─── Operaciones (supervisor/admin) ───────────────────────────────
+                        .requestMatchers(HttpMethod.PATCH,  "/api/pedidos/*/estado").hasAnyRole("SUPERVISOR","ADMIN")
+                        .requestMatchers(HttpMethod.GET,    "/api/pedidos/admin/**").hasAnyRole("CAJERO","ADMIN")
                         .requestMatchers("/api/despachos/**").hasAnyRole("SUPERVISOR","ADMIN")
                         .requestMatchers("/api/guias/**").hasAnyRole("SUPERVISOR","ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/pedidos/*/estado").hasAnyRole("SUPERVISOR","ADMIN")
+
+                        // ─── Admin ────────────────────────────────────────────────────────
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/roles/**").hasRole("ADMIN")
                         .requestMatchers("/api/permissions/**").hasRole("ADMIN")
                         .requestMatchers("/api/clientes/**").hasAnyRole("ADMIN","CAJERO")
-                        .requestMatchers(HttpMethod.GET, "/api/sucursales/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/sucursales/**").hasAnyRole("ADMIN","SUPERVISOR")
-                        .requestMatchers(HttpMethod.PUT, "/api/sucursales/**").hasAnyRole("ADMIN","SUPERVISOR")
+                        .requestMatchers(HttpMethod.POST,   "/api/sucursales/**").hasAnyRole("ADMIN","SUPERVISOR")
+                        .requestMatchers(HttpMethod.PUT,    "/api/sucursales/**").hasAnyRole("ADMIN","SUPERVISOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/sucursales/**").hasAnyRole("ADMIN","SUPERVISOR")
+
+                        // ─── Resto de pedidos autenticado ─────────────────────────────────
                         .requestMatchers("/api/pedidos/**").authenticated()
                         .anyRequest().authenticated()
                 )
