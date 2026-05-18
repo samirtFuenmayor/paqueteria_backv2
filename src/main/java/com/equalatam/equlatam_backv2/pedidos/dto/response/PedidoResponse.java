@@ -1,6 +1,5 @@
 package com.equalatam.equlatam_backv2.pedidos.dto.response;
 
-
 import com.equalatam.equlatam_backv2.pedidos.entity.*;
 
 import java.time.LocalDateTime;
@@ -66,7 +65,7 @@ public record PedidoResponse(
         EstadoPago estadoPago,
         String bancoOrigen,
         String numeroReferencia,
-        boolean tieneComprobante,   // true/false sin exponer el base64 en listados
+        boolean tieneComprobante,
         LocalDateTime fechaSubidaComprobante,
         LocalDateTime fechaVerificacionPago,
         String motivoRechazo,
@@ -78,10 +77,13 @@ public record PedidoResponse(
         String factDireccion,
         boolean factUsarDatosCliente,
 
-        // ─── Datos del registro presencial ───────────────────────────────────────────
+        // Registro presencial
         boolean registradoEnSucursal,
-        String sucursalAtencionNombre,   // nombre de la sucursal donde se atendió
-        String registradoPorNombre   // nombre completo del agente/admin
+        String sucursalAtencionNombre,
+        String registradoPorNombre,
+
+        // Cotización asociada (se llena por separado si se necesita)
+        UUID cotizacionId
 ) {
     public static PedidoResponse from(Pedido p) {
         var fact = p.getDatosFacturacion();
@@ -116,8 +118,9 @@ public record PedidoResponse(
                 p.getSucursalDestino() != null ? p.getSucursalDestino().getNombre() : null,
                 p.getSucursalDestino() != null ? p.getSucursalDestino().getCiudad() : null,
 
-                p.getRegistradoPor() != null ?
-                        p.getRegistradoPor().getNombre() + " " + p.getRegistradoPor().getApellido() : null,
+                p.getRegistradoPor() != null
+                        ? p.getRegistradoPor().getNombre() + " " + p.getRegistradoPor().getApellido()
+                        : null,
 
                 p.getFechaRegistro(),
                 p.getFechaRecepcionSede(),
@@ -131,7 +134,10 @@ public record PedidoResponse(
                 p.getFotoUrl(),
                 p.getCategoria(),
                 p.getEsPorTitular(),
-                p.getItems() != null ? p.getItems().stream().map(PedidoItemResponse::from).collect(java.util.stream.Collectors.toList())
+                p.getItems() != null
+                        ? p.getItems().stream()
+                        .map(PedidoItemResponse::from)
+                        .collect(java.util.stream.Collectors.toList())
                         : java.util.List.of(),
                 p.getPesoTotal(),
                 p.getTipoTarifa(),
@@ -152,6 +158,7 @@ public record PedidoResponse(
                 fact != null && fact.getUsarDatosCliente() != null
                         ? fact.getUsarDatosCliente()
                         : false,
+
                 p.isRegistradoEnSucursal(),
 
                 p.getSucursalAtencion() != null
@@ -160,9 +167,9 @@ public record PedidoResponse(
 
                 p.getRegistradoPor() != null
                         ? p.getRegistradoPor().getNombre() + " " + p.getRegistradoPor().getApellido()
-                        : null
+                        : null,
+
+                null // cotizacionId — se obtiene con GET /cotizaciones/pedido/{id}
         );
     }
-
-
 }
