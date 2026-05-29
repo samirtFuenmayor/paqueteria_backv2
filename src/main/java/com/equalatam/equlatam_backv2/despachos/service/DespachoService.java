@@ -313,4 +313,60 @@ public class DespachoService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Despacho no encontrado: " + id));
     }
+
+    // ─── Auto-asignar pedido al despacho abierto o crear uno nuevo ────────────────
+    @Transactional
+    public void autoAsignarADespacho(Pedido pedido, String username) {
+        UUID sucursalOrigenId = pedido.getSucursalOrigen() != null
+                ? pedido.getSucursalOrigen().getId() : null;
+        UUID sucursalDestinoId = pedido.getSucursalDestino() != null
+                ? pedido.getSucursalDestino().getId() : null;
+
+        if (sucursalOrigenId == null || sucursalDestinoId == null) return;
+
+        // Buscar despacho abierto con espacio disponible
+        List<Despacho> abiertos = despachoRepository
+                .findAbiertosEnSucursal(sucursalOrigenId);
+
+        Despacho despacho = abiertos.stream()
+                .filter(d -> !d.isLleno()
+                        && d.getSucursalDestino().getId().equals(sucursalDestinoId))
+                .findFirst()
+                .orElse(null);
+
+        // Si no hay despacho disponible, crear uno nuevo automáticamente
+        if (despacho == null) {
+            despacho = new Despacho();
+            despacho.setNumeroDespacho(generarNumeroDespacho());
+            despacho.setSucursalOrigen(pedido.getSucursalOrigen());
+            despacho.setSucursalDestino(pedido.getSucursalDestino());
+            despacho.setPesoLimite(200.0);
+            if (username != null) {
+                userRepository.findByUsername(username)
+                        .ifPresent(despacho::setCreadoPor);
+            }
+            despacho = despachoRepository.save(despacho);
+        }
+
+        // Verificar que el pedido no esté ya en un despacho activo
+        if (despachoRepository.pedidoYaEnDespachoActivo(pedido.getId())) return;
+
+        DespachoDetalle detalle = new DespachoDetalle();
+        detalle.setDespacho(despacho);
+        detalle.setPedido(pedido);
+        detalleRepository.save(detalle);
+
+        // Actualizar estado del pedido
+        pedido.setEstado(EstadoPedido.EN_CONSOLIDACION);
+        pedidoRepository.save(pedido);
+
+        // Recalcular totales y verificar si el despacho está lleno
+        recalcularTotales(despacho);
+        if (despacho.getPesoTotal() != null
+                && despacho.getPesoLimite() != null
+                && despacho.getPesoTotal() >= despacho.getPesoLimite()) {
+            despacho.setLleno(true);
+        }
+        despachoRepository.save(despacho);
+    }
 }

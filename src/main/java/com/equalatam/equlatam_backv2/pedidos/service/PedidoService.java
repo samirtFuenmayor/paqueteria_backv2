@@ -47,6 +47,7 @@ public class PedidoService {
     private final FacturaRepository    facturaRepository;
     private final PedidoItemRepository pedidoItemRepository;
     private final com.equalatam.equlatam_backv2.financiero.service.FacturaService facturaService;
+    private final com.equalatam.equlatam_backv2.despachos.service.DespachoService despachoService;
 
     // ─── Crear pedido ─────────────────────────────────────────────────────────
     @Transactional
@@ -234,7 +235,9 @@ public class PedidoService {
     // ─── Listar todos ─────────────────────────────────────────────────────────
     public List<PedidoResponse> findAll() {
         return pedidoRepository.findAll()
-                .stream().map(PedidoResponse::from).collect(Collectors.toList());
+                .stream()
+                .sorted((a, b) -> b.getFechaRegistro().compareTo(a.getFechaRegistro()))
+                .map(PedidoResponse::from).collect(Collectors.toList());
     }
 
     public PedidoResponse findById(UUID id) {
@@ -417,6 +420,9 @@ public class PedidoService {
         trackingService.registrarEvento(guardado, EstadoPedido.RECIBIDO_EN_SEDE,
                 "Pago verificado. Factura " + factura.getNumeroFactura() + " emitida.",
                 username, null, null, true, null);
+
+        // ─── Auto-asignar al despacho ─────────────────────────────────────────────────
+        despachoService.autoAsignarADespacho(guardado, username);
 
         return PedidoResponse.from(guardado);
     }

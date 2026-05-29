@@ -79,4 +79,9 @@ public class Despacho {
     public void preUpdate() {
         this.actualizadoEn = LocalDateTime.now();
     }
+
+    private Double pesoLimite = 200.0;
+    @Column(nullable = false)
+    private boolean lleno = false;
+
 }
